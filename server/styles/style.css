@@ -1,0 +1,228 @@
+:root {
+  --black: #141b1e;
+  --dark-gray: #232a2d;
+  --red: #e57474;
+  --green: #8ccf7e;
+  --yellow: #e5c76b;
+  --blue: #67b0e8;
+  --magenta: #c47fd5;
+  --cyan: #6cbfbf;
+  --light-gray: #b3b9b8;
+  --white: #dadada;
+
+  --ui-transition-time: 200ms;
+
+  --mono-font-family: "Iosevka Term", Monaco, "Courier New", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", monospace;
+
+  --bg-inline-code: var(--dark-gray);
+  --bg-code-block: var(--dark-gray);
+  --url-foreground: var(--blue);
+
+  font-family: Roboto, serif;
+}
+
+html,
+body,
+main {
+  box-sizing: border-box;
+  width: 100%;
+  height: minmax(100%, auto);
+  margin: 0;
+
+  background-color: var(--black);
+  color: var(--white);
+}
+
+main {
+  padding: 1.5rem;
+}
+
+
+section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+
+  height: 100%;
+}
+
+#notes {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) [content] 2fr minmax(0, 1fr);
+  width: 100%;
+  height: 100%;
+}
+
+#notes>* {
+  grid-column: content;
+}
+
+/* Typography */
+#notes :is(h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6) {
+  font-weight: bold;
+  line-height: 130%;
+  margin-top: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+#notes :is(p,
+  pre,
+  blockquote,
+  table,
+  ul,
+  ol,
+  dl) {
+  color: white;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+#notes :is(ul ul,
+  ul ol,
+  ol ol,
+  ol ul) {
+  color: white;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+#notes h1 {
+  font-size: 2.5rem;
+  color: white;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid white;
+  padding-bottom: 1rem;
+}
+
+#notes h2 {
+  font-size: 2.0rem;
+  color: white;
+  margin-top: 3.5rem;
+}
+
+#notes h3 {
+  font-size: 1.60rem;
+  color: hsl(0, 0%, 80%);
+}
+
+#notes h4 {
+  font-size: 1.30rem;
+  color: hsl(0, 0%, 75%);
+}
+
+#notes h5 {
+  font-size: 1.15rem;
+  color: hsl(0, 0%, 62%);
+}
+
+#notes h6 {
+  font-size: 0.95rem;
+  color: hsl(0, 0%, 50%);
+}
+
+#notes li {
+  color: white;
+  margin: 0.3rem auto;
+}
+
+#notes ul {
+  color: white;
+  margin-left: 2.5rem;
+  padding-left: 0;
+}
+
+#notes dt {
+  font-weight: bold;
+}
+
+#notes pre {
+  border: 0.05rem solid white;
+  background-color: var(--bg-code-block);
+  border-radius: 0.5rem;
+  font-family: var(--mono-font-family);
+  font-size: 0.8rem;
+  padding: 0.5rem 1rem;
+}
+
+
+/* Images */
+#notes :is(embed,
+  figcaption,
+  img,
+  video) {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+#notes :is(th, td) {
+  background-color: var(--bg-inline-code);
+  border: 1px solid #ccc;
+  padding: 0.3rem;
+}
+
+#notes img {
+  border: none;
+  padding-top: 1rem;
+}
+
+#notes figcaption {
+  color: hsl(40, 3%, 53%);
+  font-style: italic;
+  font-size: 80%;
+}
+
+#notes blockquote {
+  color: hsl(0, 0%, 41%);
+  line-height: 110%;
+  padding-left: 0.8rem;
+  border-left: 5px solid hsl(0, 0%, 86%);
+  margin: 1rem 0rem;
+  margin-left: 0.5rem
+}
+
+#notes hr {
+  border: none;
+  border-top: 1px solid #999;
+  margin-top: 5rem;
+  margin-bottom: 5rem;
+  width: 45%;
+}
+
+#notes del {
+  text-decoration: line-through;
+  color: #777;
+}
+
+#notes code {
+  font-family: var(--mono-font-family);
+}
+
+/* Anchor Tags */
+#notes :is(p, li)>a {
+  color: var(--url-foreground);
+  font-weight: bold;
+  text-decoration: none;
+}
+
+#notes :is(p, li)>a:hover {
+  color: hsl(0, 0%, 86%);
+  background-color: hsl(0, 0%, 28%);
+}
+
+/* Inline code blocks */
+#notes :is(p, li, ul)>code {
+  background-clip: padding-box;
+  background-color: var(--bg-inline-code);
+  display: inline-block;
+  font-family: var(--mono-font-family);
+  padding: 0rem 0.25rem;
+}
