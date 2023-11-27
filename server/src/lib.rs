@@ -1,6 +1,8 @@
 use cfg_if::cfg_if;
 // pub mod api;
 pub mod app;
+// pub mod auth;
+pub mod settings;
 // pub mod error_template;
 // pub mod fileserv;
 

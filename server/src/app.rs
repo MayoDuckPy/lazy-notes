@@ -1,7 +1,13 @@
-use ammonia::Builder;
+use cfg_if::cfg_if;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
+
+// Tell rustc that components use ssr with islands enabled
+cfg_if! { if #[cfg(feature = "ssr")] {
+use ammonia::Builder;
+use crate::settings;
+use crate::settings::LazyNotesSettings;
 use pulldown_cmark::{html, Options, Parser};
 use std::fs::read_to_string;
 
@@ -9,6 +15,10 @@ use std::fs::read_to_string;
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
+
+    // Get Lazy Notes configuration
+    let ln_settings = settings::get_configuration(None).expect("Failed to read configuration file");
+    provide_context(ln_settings);
 
     view! {
         // id=leptos means cargo-leptos will hot-reload this stylesheet
@@ -44,6 +54,8 @@ pub fn HomePage() -> impl IntoView {
 #[component]
 pub fn Note() -> impl IntoView {
     let params = use_params_map();
+    let ln_settings = use_context::<LazyNotesSettings>().expect("Failed to get configuration context");
+
     let notes_as_html = move || {
         let mut notes = "File not found".to_string();
         if let Some(path) = params.with(|params| params.get("path").cloned()) {
@@ -52,7 +64,7 @@ pub fn Note() -> impl IntoView {
                 ext = "/index.md".to_string();
             }
 
-            notes = match read_to_string(format!("/path/to/notes/dir/{path}{ext}")) {
+            notes = match read_to_string(format!("{0}/{path}{ext}", &ln_settings.notes_dir)) {
                 Ok(notes) => notes,
                 Err(e) => format!("Error reading file: {e}").to_string(),
             };
@@ -92,3 +104,4 @@ fn convert_to_html(md_input: &str) -> String {
         .clean(&dirty_md)
         .to_string()
 }
+}}
