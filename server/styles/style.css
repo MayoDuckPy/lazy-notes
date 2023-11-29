@@ -19,6 +19,7 @@
   --url-foreground: var(--blue);
 
   font-family: Roboto, serif;
+  font-size: 110%;
 }
 
 html,
@@ -26,15 +27,18 @@ body,
 main {
   box-sizing: border-box;
   width: 100%;
-  height: minmax(100%, auto);
+  min-height: 100vh;
+  height: fit-content;
   margin: 0;
+  overflow: scroll;
 
   background-color: var(--black);
   color: var(--white);
 }
 
 main {
-  padding: 1.5rem;
+  padding-inline: 1.5rem;
+  padding-block: 5vh;
 }
 
 
