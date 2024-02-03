@@ -1,8 +1,9 @@
 use cfg_if::cfg_if;
 // pub mod api;
 pub mod app;
-// pub mod auth;
+pub mod auth;
 pub mod settings;
+pub mod state;
 // pub mod error_template;
 // pub mod fileserv;
 
@@ -10,7 +11,6 @@ cfg_if! { if #[cfg(feature = "hydrate")] {
     use leptos::*;
     use log::Level::Debug;
     use wasm_bindgen::prelude::wasm_bindgen;
-    use crate::app::*;
 
     #[wasm_bindgen]
     pub fn hydrate() {

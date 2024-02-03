@@ -93,6 +93,7 @@ fn convert_to_html(md_input: &str) -> String {
     html::push_html(&mut dirty_md, parser);
 
     // TODO: Allow specifying allowed tags in settings.toml
+    // TODO: Add MathML specs
     Builder::default()
         .add_tags(&["audio"])
         .add_tag_attributes("video", &["src", "autoplay", "loop", "controls", "muted"])

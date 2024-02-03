@@ -7,19 +7,28 @@ use std::fs::read_to_string;
 
 // Define toml layout
 #[derive(Debug, Deserialize, Clone)]
-struct LazyNotesToml {
-    settings: LazyNotesSettings
+pub struct LazyNotesConfiguration {
+    pub settings: LazyNotesSettings,
+    pub database: DatabaseSettings,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct LazyNotesSettings {
     // TODO: Add field for db type
-    pub db_host: Option<String>,
     pub notes_dir: String,
     pub resources_dir: String,
 }
 
-pub fn get_configuration(path: Option<String>) -> Option<LazyNotesSettings> {
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct DatabaseSettings {
+    pub db_host: String,
+    pub database: String,
+    pub namespace: String,
+    pub username: String,
+    pub password: String,
+}
+
+pub fn get_configuration(path: Option<String>) -> Option<LazyNotesConfiguration> {
     enum Errors {
         IoError,
         ParseError,
@@ -36,17 +45,17 @@ pub fn get_configuration(path: Option<String>) -> Option<LazyNotesSettings> {
             Errors::IoError
          })
         .and_then(|config| {
-            toml::from_str::<LazyNotesToml>(&config).map_err(|err| {
+            toml::from_str::<LazyNotesConfiguration>(&config).map_err(|err| {
                 logging::error!("Failed to parse toml configuration: {err}");
                 Errors::ParseError
             })
         })
-        .map(|ln_toml| { ln_toml.settings })
         .ok()
 
     // TODO: Parse env variables
 }
 
+#[cfg(test)]
 mod tests {
     #[allow(dead_code)]
     fn get_settings_file() -> &'static str {
@@ -64,10 +73,10 @@ mod tests {
     #[test]
     fn configuration_correct() {
         use crate::settings::get_configuration;
-        let ln_settings = get_configuration(Some(get_settings_file().to_string())).unwrap();
-        assert_eq!(ln_settings.db_host, None);
-        assert_eq!(ln_settings.notes_dir, "tests/notes");
-        assert_eq!(ln_settings.resources_dir, "tests/resources");
+        let ln_config = get_configuration(Some(get_settings_file().to_string())).unwrap();
+        assert_eq!(ln_config.settings.db_host, None);
+        assert_eq!(ln_config.settings.notes_dir, "tests/notes");
+        assert_eq!(ln_config.settings.resources_dir, "tests/resources");
     }
 }
 }}

@@ -1,3 +1,10 @@
 [settings]
 notes_dir = "tests/notes"
 resources_dir = "tests/resources"
+
+[database]
+db_host = "localhost:8000"
+database = "lazy_notes_test"
+namespace = "lazy_notes"
+username = "admin"
+password = "debug"
