@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct User {
-    username: String,
-    password: String,
+    pub username: String,
+    pub password: String,
     // salt: String,
     anonymous: bool,
 }
@@ -88,7 +88,7 @@ pub async fn signup(
 ) -> Result<(), ServerFnError> {
     let pool: Surreal<Client> = use_context().ok_or_else(|| ServerFnError::new("Pool missing"))?;
 
-    if let Some(_user) = User::get(username.clone(), &pool).await {
+    if let Some(user) = User::get(username.clone(), &pool).await {
         return Err(ServerFnError::new("Username is taken"));
     }
 
@@ -118,6 +118,7 @@ pub async fn login(
     let auth: AuthSession<User, String, SessionSurrealPool<Client>, Surreal<Client>> =
         use_context().ok_or_else(|| ServerFnError::new("Auth session missing"))?;
 
+    // TODO: Handle invalid username inputs
     let user = User::get(username, &pool)
         .await
         .ok_or_else(|| ServerFnError::new("User does not exist"))?;
@@ -128,6 +129,7 @@ pub async fn login(
 
     auth.login_user(user.username);
     leptos_axum::redirect("/"); // TODO: Change redirect to notes index
+                                // leptos_axum::redirect(format!("/{user.username}/notes/index.md"));
     Ok(())
 }
 

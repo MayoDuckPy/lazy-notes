@@ -5,11 +5,16 @@ use leptos_router::*;
 
 // Tell rustc that components use ssr with islands enabled
 cfg_if! { if #[cfg(feature = "ssr")] {
+use axum_session_auth::{AuthSession, SessionSurrealPool};
 use ammonia::Builder;
+use crate::auth;
 use crate::settings;
 use crate::settings::LazyNotesSettings;
+use http::StatusCode;
+use leptos_axum::ResponseOptions;
 use pulldown_cmark::{html, Options, Parser};
 use std::fs::read_to_string;
+use surrealdb::{engine::remote::ws::Client, Surreal};
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -32,6 +37,7 @@ pub fn App() -> impl IntoView {
             <main>
                 <Routes>
                     <Route path="" view=HomePage/>
+                    <Route path="/test" view=Test/>
                     <Route path="/user/notes/*path" view=Note/>
                 </Routes>
             </main>
@@ -39,20 +45,78 @@ pub fn App() -> impl IntoView {
     }
 }
 
-// TODO: Create db tables
+#[component]
+pub fn Test() -> impl IntoView {
+    let response: ResponseOptions = expect_context();
+    let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
+        expect_context();
+
+    if !auth.is_authenticated() {
+        response.set_status(StatusCode::UNAUTHORIZED);
+        return view! {
+            <p>"Please login to view this page"</p>
+        }
+    }
+
+    let user = auth.current_user.clone().unwrap_or_default();
+    view! {
+        <p>"Current user: "{move || user.username.clone()}</p>
+    }
+}
+
 // TODO: Setup account auth
 // TODO: Setup cache
 #[component]
 pub fn HomePage() -> impl IntoView {
+    let send_login = create_server_action::<auth::Login>();
+    let send_logout = create_server_action::<auth::Logout>();
+    let response = send_login.value();
     view! {
-        <section>
+        <article>
             <h1>"Lazy Notes"</h1>
-        </section>
+            <A href="/test">"Test page"</A>
+            <br/>
+            <ActionForm action=send_login>
+                <label>
+                    "Username"
+                    // TODO: Prevent invalid username inputs [a-zA-Z0-9_]*
+                    <input name="username"/>
+                </label>
+                <label>
+                    "Password"
+                    <input name="password" type="password"/>
+                </label>
+                <input type="submit" value="Submit"/>
+            </ActionForm>
+            <ErrorBoundary fallback=move |_| view! { <p>"Incorrect login"</p>}>
+                <p>{response}</p>
+            </ErrorBoundary>
+
+            <br/>
+            // TODO: Move to nav and make appear after login
+            <ActionForm action=send_logout>
+                <input type="submit" value="Logout"/>
+            </ActionForm>
+        </article>
     }
 }
 
 #[component]
 pub fn Note() -> impl IntoView {
+    let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
+        expect_context();
+    let response: ResponseOptions = expect_context();
+
+    // TODO: Verify user for given path
+    if !auth.is_authenticated() {
+        response.set_status(StatusCode::UNAUTHORIZED);
+        return view! {
+            <article class="no_permission">
+                <p>"You do not have permission to view this page"</p>
+            </article>
+        }
+    }
+
     let params = use_params_map();
     let ln_settings = use_context::<LazyNotesSettings>().expect("Failed to get configuration context");
 
@@ -78,10 +142,10 @@ pub fn Note() -> impl IntoView {
     };
 
     view! {
-        <section>
+        <article>
             <nav>"Lazy Notes"</nav>
             <article id="notes" inner_html=notes_as_html/>
-        </section>
+        </article>
     }
 }
 
