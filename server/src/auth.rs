@@ -14,7 +14,9 @@ pub struct User {
 cfg_if!( if #[cfg(feature = "ssr")] {
     use async_trait::async_trait;
     use axum_session_auth::{Authentication, AuthSession, SessionSurrealPool};
+    use crate::settings::LazyNotesSettings;
     use surrealdb::{engine::remote::ws::Client, Surreal};
+    use std::fs::{create_dir_all, File};
 
     impl User {
         pub async fn get(username: String, pool: &Surreal<Client>) -> Option<Self> {
@@ -88,7 +90,7 @@ pub async fn signup(
 ) -> Result<(), ServerFnError> {
     let pool: Surreal<Client> = use_context().ok_or_else(|| ServerFnError::new("Pool missing"))?;
 
-    if let Some(user) = User::get(username.clone(), &pool).await {
+    if let Some(_user) = User::get(username.clone(), &pool).await {
         return Err(ServerFnError::new("Username is taken"));
     }
 
@@ -96,7 +98,12 @@ pub async fn signup(
         return Err(ServerFnError::new("Passwords did not match"));
     }
 
-    // TODO: Create user notes directory
+    // Create user directories
+    let ln_settings: LazyNotesSettings = expect_context();
+    let user_dir = format!("{}/{}", &ln_settings.notes_dir, &username);
+    let _ = create_dir_all(format!("{}/notes", &user_dir));
+    let _ = create_dir_all(format!("{}/resources", &user_dir));
+    let _ = File::create_new(format!("{}/notes/index.md", user_dir));
 
     let _record: Option<SqlUser> = pool
         .create(("users", username.clone()))
@@ -127,9 +134,8 @@ pub async fn login(
         return Err(ServerFnError::new("Incorrect password"));
     }
 
-    auth.login_user(user.username);
-    leptos_axum::redirect("/"); // TODO: Change redirect to notes index
-                                // leptos_axum::redirect(format!("/{user.username}/notes/index.md"));
+    auth.login_user(user.username.clone());
+    leptos_axum::redirect(&format!("/{}/notes/index.md", &user.username));
     Ok(())
 }
 

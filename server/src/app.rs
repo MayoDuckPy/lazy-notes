@@ -16,6 +16,12 @@ use pulldown_cmark::{html, Options, Parser};
 use std::fs::read_to_string;
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
+#[derive(Clone, Params, PartialEq)]
+struct NotesParams {
+    user: String,
+    path: String,
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
@@ -26,19 +32,15 @@ pub fn App() -> impl IntoView {
     provide_context(ln_settings);
 
     view! {
-        // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Stylesheet id="leptos" href="/pkg/lazy-notes.css"/>
-
-        // sets the document title
         <Title text="Lazy Notes"/>
 
-        // content for this welcome page
         <Router>
             <main>
                 <Routes>
                     <Route path="" view=HomePage/>
                     <Route path="/test" view=Test/>
-                    <Route path="/user/notes/*path" view=Note/>
+                    <Route path="/:user/notes/*path" view=Note/>
                 </Routes>
             </main>
         </Router>
@@ -64,7 +66,6 @@ pub fn Test() -> impl IntoView {
     }
 }
 
-// TODO: Setup account auth
 // TODO: Setup cache
 #[component]
 pub fn HomePage() -> impl IntoView {
@@ -107,35 +108,45 @@ pub fn Note() -> impl IntoView {
         expect_context();
     let response: ResponseOptions = expect_context();
 
-    // TODO: Verify user for given path
+    let err_view = view! {
+        <article class="no_permission">
+            <p>"You do not have permission to view this page"</p>
+        </article>
+    };
+
     if !auth.is_authenticated() {
         response.set_status(StatusCode::UNAUTHORIZED);
-        return view! {
-            <article class="no_permission">
-                <p>"You do not have permission to view this page"</p>
-            </article>
+        return err_view;
+    }
+
+    let user = auth.current_user.clone().expect("User is authenticated");
+    let ln_settings = use_context::<LazyNotesSettings>().expect("Failed to get configuration context");
+
+    // TODO: Is it possible to not clone 'params'?
+    let params = use_params::<NotesParams>();
+    if let Ok(username) = params.with(|params| params.clone().map(move |params| params.user.clone())) {
+        if username != user.username {
+            response.set_status(StatusCode::UNAUTHORIZED);
+            return err_view;
         }
     }
 
-    let params = use_params_map();
-    let ln_settings = use_context::<LazyNotesSettings>().expect("Failed to get configuration context");
-
     let notes_as_html = move || {
         let mut notes = "File not found".to_string();
-        if let Some(path) = params.with(|params| params.get("path").cloned()) {
+        if let Ok(path) = params.with(|params| params.clone().map(move |params| params.path.clone())) {
             let mut ext = String::new();
             if &path[path.len() - 3..] != ".md" {
                 ext = "/index.md".to_string();
             }
 
-            notes = match read_to_string(format!("{0}/{path}{ext}", &ln_settings.notes_dir)) {
+            notes = match read_to_string(format!("{}/{}/notes/{path}{ext}", &ln_settings.notes_dir, &user.username)) {
                 Ok(notes) => notes,
                 Err(e) => format!("Error reading file: {e}").to_string(),
             };
 
             // Process urls to reflect current user
-            notes = notes.replace("](/resources", "](/user/resources");
-            notes = notes.replace("src=\"/resources", "src=\"/user/resources");
+            notes = notes.replace("](/resources", &format!("](/{}/resources", &user.username));
+            notes = notes.replace("src=\"/resources", &format!("src=\"/{}/resources", &user.username));
         }
 
         convert_to_html(&notes)

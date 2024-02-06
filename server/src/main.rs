@@ -107,6 +107,7 @@ async fn leptos_routes_handler(
         move || {
             provide_context(auth_session.clone());
             provide_context(app_state.pool.clone());
+            provide_context(app_state.settings.clone());
         },
         App,
     );
@@ -127,6 +128,7 @@ async fn server_fn_handler(
         move || {
             provide_context(auth_session.clone());
             provide_context(app_state.pool.clone());
+            provide_context(app_state.settings.clone());
         },
         request,
     )
