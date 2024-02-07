@@ -59,13 +59,11 @@ async fn main() {
     let root = leptos_options.site_root.as_str();
     let routes = generate_route_list(App);
 
-    // TODO: Add ln_settings as context to leptos routes
     let app = Router::new()
         .nest_service("/pkg", ServeDir::new(format!("{}/pkg", root)))
         .nest_service("/scripts", ServeDir::new(format!("{}/scripts", root)))
         .nest_service("/icons", ServeDir::new(format!("{}/icons", root)))
         .nest_service("/user/resources", ServeDir::new(&ln_settings.resources_dir))
-        // TODO: Handle routes with auth contexts
         .route(
             "/api/*fn_name",
             get(server_fn_handler).post(server_fn_handler),

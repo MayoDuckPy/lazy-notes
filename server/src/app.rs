@@ -1,16 +1,15 @@
 use cfg_if::cfg_if;
-use leptos::*;
-use leptos_meta::*;
-use leptos_router::*;
 
 // Tell rustc that components use ssr with islands enabled
 cfg_if! { if #[cfg(feature = "ssr")] {
 use axum_session_auth::{AuthSession, SessionSurrealPool};
 use ammonia::Builder;
 use crate::auth;
-use crate::settings;
 use crate::settings::LazyNotesSettings;
 use http::StatusCode;
+use leptos::*;
+use leptos_meta::*;
+use leptos_router::*;
 use leptos_axum::ResponseOptions;
 use pulldown_cmark::{html, Options, Parser};
 use std::fs::read_to_string;
@@ -27,10 +26,6 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
-    // Get Lazy Notes configuration
-    let ln_settings = settings::get_configuration(None).expect("Failed to read configuration file");
-    provide_context(ln_settings);
-
     view! {
         <Stylesheet id="leptos" href="/pkg/lazy-notes.css"/>
         <Title text="Lazy Notes"/>
@@ -38,9 +33,17 @@ pub fn App() -> impl IntoView {
         <Router>
             <main>
                 <Routes>
-                    <Route path="" view=HomePage/>
-                    <Route path="/test" view=Test/>
-                    <Route path="/:user/notes/*path" view=Note/>
+                    // NOTE: This component is not receiving global context
+                    //       defined in 'main.rs' so redirect to /home is
+                    //       needed to obtain AuthSession.
+                    <Route path="" view=|| leptos_axum::redirect("/home")/>
+                    <Route path="/home" view=HomePage/>
+                    <Route path="/signup" view=Signup/>
+                    <Route path="/login" view=Login/>
+                    <Route path="/:user/notes" view=|| view! { <Outlet/> }>
+                        <Route path="" view=|| leptos_axum::redirect("notes/index.md")/>
+                        <Route path="*path" view=Note/>
+                    </Route>
                 </Routes>
             </main>
         </Router>
@@ -48,56 +51,119 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
-pub fn Test() -> impl IntoView {
-    let response: ResponseOptions = expect_context();
+pub fn Navbar() -> impl IntoView {
     let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
         expect_context();
 
-    if !auth.is_authenticated() {
-        response.set_status(StatusCode::UNAUTHORIZED);
-        return view! {
-            <p>"Please login to view this page"</p>
-        }
+    let send_logout = create_server_action::<auth::Logout>();
+
+    view! {
+        <nav class="header_nav">
+            <p>"Lazy Notes"</p>
+            {move || if auth.is_authenticated() {
+                view! {
+                    <ActionForm action=send_logout>
+                        <input type="submit" value="Logout"/>
+                    </ActionForm>
+                }.into_view()
+            } else {
+                view! {
+                    <A href="/signup">"Signup"</A>
+                    <A href="/login">"Login"</A>
+                }.into_view()
+            }}
+        </nav>
+    }
+}
+
+#[component]
+pub fn Signup() -> impl IntoView {
+    // let response: ResponseOptions = expect_context();
+    let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
+        expect_context();
+
+    // If authenticated, redirect to user notes page
+    if auth.is_authenticated() {
+        auth.current_user.and_then(|user| {
+            leptos_axum::redirect(&format!("/{}/notes/index.md", &user.username));
+            Some(())
+        });
     }
 
-    let user = auth.current_user.clone().unwrap_or_default();
+    let send_signup = create_server_action::<auth::Signup>();
+
     view! {
-        <p>"Current user: "{move || user.username.clone()}</p>
+        <article class="signup">
+            <ActionForm action=send_signup>
+                <label>
+                    "Username"
+                    <input name="username" pattern="[a-zA-Z0-9_-]*"/>
+                </label>
+                <label>
+                    "Password"
+                    <input name="password" type="password"/>
+                </label>
+                <label>
+                    "Password Confirmation"
+                    <input name="password_confirmation" type="password"/>
+                </label>
+                <input type="submit" value="Submit"/>
+            </ActionForm>
+            <ErrorBoundary fallback=move |_| view! { <p>"Incorrect field(s)"</p>}>
+                <p></p>
+            </ErrorBoundary>
+        </article>
+    }
+}
+
+#[component]
+pub fn Login() -> impl IntoView {
+    // let response: ResponseOptions = expect_context();
+    let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
+        expect_context();
+
+    // If authenticated, redirect to user notes page
+    if auth.is_authenticated() {
+        auth.current_user.and_then(|user| {
+            leptos_axum::redirect(&format!("/{}/notes/index.md", &user.username));
+            Some(())
+        });
+    }
+
+    let send_login = create_server_action::<auth::Login>();
+    let response = send_login.value();
+
+    view! {
+        <article class="login">
+            <ActionForm action=send_login>
+                <label>
+                    "Username"
+                    <input name="username" pattern="[a-zA-Z0-9_-]*"/>
+                </label>
+                <label>
+                    "Password"
+                    <input name="password" type="password"/>
+                </label>
+                // <label>
+                //     "Remember Me"
+                //     <input name="remember" type="radio"/>
+                // </label>
+                <input type="submit" value="Submit"/>
+            </ActionForm>
+            <ErrorBoundary fallback=move |_| view! { <p>"Incorrect login"</p>}>
+                <p>{response}</p>
+            </ErrorBoundary>
+        </article>
     }
 }
 
 // TODO: Setup cache
 #[component]
 pub fn HomePage() -> impl IntoView {
-    let send_login = create_server_action::<auth::Login>();
-    let send_logout = create_server_action::<auth::Logout>();
-    let response = send_login.value();
     view! {
+        <Navbar/>
         <article>
-            <h1>"Lazy Notes"</h1>
-            <A href="/test">"Test page"</A>
-            <br/>
-            <ActionForm action=send_login>
-                <label>
-                    "Username"
-                    // TODO: Prevent invalid username inputs [a-zA-Z0-9_]*
-                    <input name="username"/>
-                </label>
-                <label>
-                    "Password"
-                    <input name="password" type="password"/>
-                </label>
-                <input type="submit" value="Submit"/>
-            </ActionForm>
-            <ErrorBoundary fallback=move |_| view! { <p>"Incorrect login"</p>}>
-                <p>{response}</p>
-            </ErrorBoundary>
-
-            <br/>
-            // TODO: Move to nav and make appear after login
-            <ActionForm action=send_logout>
-                <input type="submit" value="Logout"/>
-            </ActionForm>
+            <h1>"Welcome to Lazy Notes"</h1>
         </article>
     }
 }
@@ -108,15 +174,9 @@ pub fn Note() -> impl IntoView {
         expect_context();
     let response: ResponseOptions = expect_context();
 
-    let err_view = view! {
-        <article class="no_permission">
-            <p>"You do not have permission to view this page"</p>
-        </article>
-    };
-
     if !auth.is_authenticated() {
         response.set_status(StatusCode::UNAUTHORIZED);
-        return err_view;
+        return view! { <Unauthorized/> };
     }
 
     let user = auth.current_user.clone().expect("User is authenticated");
@@ -127,7 +187,7 @@ pub fn Note() -> impl IntoView {
     if let Ok(username) = params.with(|params| params.clone().map(move |params| params.user.clone())) {
         if username != user.username {
             response.set_status(StatusCode::UNAUTHORIZED);
-            return err_view;
+            return view! { <Unauthorized/> };
         }
     }
 
@@ -157,9 +217,19 @@ pub fn Note() -> impl IntoView {
             <nav>"Lazy Notes"</nav>
             <article id="notes" inner_html=notes_as_html/>
         </article>
+    }.into_view()
+}
+
+#[component]
+pub fn Unauthorized() -> impl IntoView {
+    view! {
+        <article class="no_permission">
+            <p>"You do not have permission to view this page."</p>
+        </article>
     }
 }
 
+/// Handles sanitizing and converting markdown to html.
 fn convert_to_html(md_input: &str) -> String {
     let options = Options::all();
     let parser = Parser::new_ext(md_input, options);

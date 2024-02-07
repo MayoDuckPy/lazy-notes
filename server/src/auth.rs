@@ -81,6 +81,7 @@ impl SqlUser {
     }
 }
 
+/// API endpoint which handles user signups.
 #[server(endpoint = "signup")]
 pub async fn signup(
     username: String,
@@ -115,6 +116,7 @@ pub async fn signup(
     Ok(())
 }
 
+/// API endpoint which handles user login.
 #[server(endpoint = "login")]
 pub async fn login(
     username: String,
@@ -139,6 +141,7 @@ pub async fn login(
     Ok(())
 }
 
+/// API endpoint to logout the user.
 #[server(endpoint = "logout")]
 pub async fn logout() -> Result<(), ServerFnError> {
     let auth: AuthSession<User, String, SessionSurrealPool<Client>, Surreal<Client>> =
