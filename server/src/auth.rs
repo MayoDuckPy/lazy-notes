@@ -101,7 +101,7 @@ pub async fn signup(
 
     // Create user directories
     let ln_settings: LazyNotesSettings = expect_context();
-    let user_dir = format!("{}/{}", &ln_settings.notes_dir, &username);
+    let user_dir = format!("{}/{}", &ln_settings.data_dir, &username);
     let _ = create_dir_all(format!("{}/notes", &user_dir));
     let _ = create_dir_all(format!("{}/resources", &user_dir));
     let _ = File::create_new(format!("{}/notes/index.md", user_dir));

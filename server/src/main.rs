@@ -1,7 +1,13 @@
 use cfg_if::cfg_if;
 
 cfg_if!( if #[cfg(feature = "ssr")] {
-    use axum::{body::Body, http::Request, routing::get, response::{IntoResponse, Response}, extract::{Path, State}, Router};
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        routing::get,
+        response::{IntoResponse, Response},
+        extract::{Path, State}, Router
+    };
     use axum_session::{SessionConfig, SessionLayer, SessionStore};
     use axum_session_auth::{AuthConfig, AuthSession, AuthSessionLayer, SessionSurrealPool};
     use leptos::logging::log;
@@ -9,6 +15,7 @@ cfg_if!( if #[cfg(feature = "ssr")] {
     use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
     use log::Level::Debug;
     use surrealdb::{engine::remote::ws::{Client, Ws}, opt::auth::Namespace, Surreal};
+    use tower::util::ServiceExt;
     use tower_http::services::ServeDir;
 
     use lazy_notes::app::*;
@@ -63,7 +70,7 @@ async fn main() {
         .nest_service("/pkg", ServeDir::new(format!("{}/pkg", root)))
         .nest_service("/scripts", ServeDir::new(format!("{}/scripts", root)))
         .nest_service("/icons", ServeDir::new(format!("{}/icons", root)))
-        .nest_service("/user/resources", ServeDir::new(&ln_settings.resources_dir))
+        .route("/:user/resources/*file", get(note_resource_handler))
         .route(
             "/api/*fn_name",
             get(server_fn_handler).post(server_fn_handler),
@@ -131,4 +138,33 @@ async fn server_fn_handler(
         request,
     )
     .await
+}
+
+#[cfg(feature = "ssr")]
+async fn note_resource_handler(
+    auth: AuthSession<User, String, SessionSurrealPool<Client>, Surreal<Client>>,
+    Path((username, _file)): Path<(String, String)>,
+    State(state): State<AppState>,
+    req: Request<Body>,
+) -> Response {
+    let root = state.settings.data_dir;
+
+    if !auth.is_authenticated()
+        || auth.current_user.expect("User is authenticated").username != username
+    {
+        return (
+            StatusCode::UNAUTHORIZED,
+            "Resource requires permission to view",
+        )
+            .into_response();
+    }
+
+    match ServeDir::new(root).oneshot(req).await {
+        Ok(res) => res.into_response(),
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Something went wrong: {err}"),
+        )
+            .into_response(),
+    }
 }

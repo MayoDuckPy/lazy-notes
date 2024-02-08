@@ -199,7 +199,7 @@ pub fn Note() -> impl IntoView {
                 ext = "/index.md".to_string();
             }
 
-            notes = match read_to_string(format!("{}/{}/notes/{path}{ext}", &ln_settings.notes_dir, &user.username)) {
+            notes = match read_to_string(format!("{}/{}/notes/{path}{ext}", &ln_settings.data_dir, &user.username)) {
                 Ok(notes) => notes,
                 Err(e) => format!("Error reading file: {e}").to_string(),
             };

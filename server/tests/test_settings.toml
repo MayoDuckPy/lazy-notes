@@ -1,6 +1,5 @@
 [settings]
-notes_dir = "tests/notes"
-resources_dir = "tests/resources"
+data_dir = "tests/notes"
 
 [database]
 db_host = "localhost:8000"

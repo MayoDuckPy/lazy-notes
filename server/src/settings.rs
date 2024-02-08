@@ -15,8 +15,7 @@ pub struct LazyNotesConfiguration {
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct LazyNotesSettings {
     // TODO: Add field for db type
-    pub notes_dir: String,
-    pub resources_dir: String,
+    pub data_dir: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -75,8 +74,7 @@ mod tests {
         use crate::settings::get_configuration;
         let ln_config = get_configuration(Some(get_settings_file().to_string())).unwrap();
         assert_eq!(ln_config.settings.db_host, None);
-        assert_eq!(ln_config.settings.notes_dir, "tests/notes");
-        assert_eq!(ln_config.settings.resources_dir, "tests/resources");
+        assert_eq!(ln_config.settings.data_dir, "tests/notes");
     }
 }
 }}

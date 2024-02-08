@@ -1,3 +1,9 @@
 [settings]
-notes_dir = "/path/to/your/notes"
-resources_dir = "/path/to/your/resources"
+data_dir = "/path/to/your/data"
+
+[database]
+db_host = "localhost:8000"
+database = "lazy_notes"
+namespace = "lazy_notes"
+username = "admin"
+password = "debug"
