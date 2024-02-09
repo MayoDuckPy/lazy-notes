@@ -2132,6 +2132,7 @@ dependencies = [
  "axum",
  "axum_session",
  "axum_session_auth",
+ "bcrypt",
  "cfg-if",
  "console_error_panic_hook",
  "console_log",

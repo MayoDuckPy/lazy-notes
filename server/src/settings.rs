@@ -6,7 +6,7 @@ use serde::Deserialize;
 use std::fs::read_to_string;
 
 // Define toml layout
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct LazyNotesConfiguration {
     pub settings: LazyNotesSettings,
     pub database: DatabaseSettings,
@@ -54,6 +54,7 @@ pub fn get_configuration(path: Option<String>) -> Option<LazyNotesConfiguration>
     // TODO: Parse env variables
 }
 
+#[cfg(feature = "ssr")]
 #[cfg(test)]
 mod tests {
     #[allow(dead_code)]
@@ -61,19 +62,17 @@ mod tests {
         "tests/test_settings.toml"
     }
 
-    #[cfg(not(any(feature = "csr", feature = "hydrate")))]
     #[test]
     fn can_parse_configuration() {
         use crate::settings::get_configuration;
         assert_ne!(get_configuration(Some(get_settings_file().to_string())), None);
     }
 
-    #[cfg(not(any(feature = "csr", feature = "hydrate")))]
     #[test]
     fn configuration_correct() {
         use crate::settings::get_configuration;
         let ln_config = get_configuration(Some(get_settings_file().to_string())).unwrap();
-        assert_eq!(ln_config.settings.db_host, None);
+        assert_eq!(ln_config.database.db_host, "localhost:8000");
         assert_eq!(ln_config.settings.data_dir, "tests/notes");
     }
 }

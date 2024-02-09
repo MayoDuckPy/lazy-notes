@@ -5,8 +5,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct User {
     pub username: String,
-    pub password: String,
-    // salt: String,
     anonymous: bool,
 }
 
@@ -14,18 +12,14 @@ pub struct User {
 cfg_if!( if #[cfg(feature = "ssr")] {
     use async_trait::async_trait;
     use axum_session_auth::{Authentication, AuthSession, SessionSurrealPool};
+    use bcrypt::{hash, verify, DEFAULT_COST};
     use crate::settings::LazyNotesSettings;
     use surrealdb::{engine::remote::ws::Client, Surreal};
     use std::fs::{create_dir_all, File};
 
     impl User {
         pub async fn get(username: String, pool: &Surreal<Client>) -> Option<Self> {
-            let sqluser: Option<SqlUser> = pool
-                .select(("users", username))
-                .await
-                .ok()?;
-
-            Some(sqluser?.into_user())
+            Some(SqlUser::get(username, pool).await?.into_user())
         }
     }
 
@@ -33,7 +27,6 @@ cfg_if!( if #[cfg(feature = "ssr")] {
         fn default() -> Self {
             Self {
                 username: "Guest".into(),
-                password: "".into(),
                 anonymous: true,
             }
         }
@@ -63,23 +56,27 @@ cfg_if!( if #[cfg(feature = "ssr")] {
             self.anonymous
         }
     }
-});
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct SqlUser {
-    pub username: String,
-    pub password: String,
-}
+    #[derive(Serialize, Deserialize, Clone)]
+    pub struct SqlUser {
+        pub username: String,
+        pub password_hash: String,
+    }
 
-impl SqlUser {
-    pub fn into_user(self) -> User {
-        User {
-            username: self.username,
-            password: self.password,
-            anonymous: false,
+    impl SqlUser {
+        pub async fn get(username: String, pool: &Surreal<Client>) -> Option<Self> {
+            let sqluser: Option<SqlUser> = pool.select(("users", username)).await.ok()?;
+            sqluser
+        }
+
+        pub fn into_user(self) -> User {
+            User {
+                username: self.username,
+                anonymous: false,
+            }
         }
     }
-}
+});
 
 /// API endpoint which handles user signups.
 #[server(endpoint = "signup")]
@@ -108,7 +105,10 @@ pub async fn signup(
 
     let _record: Option<SqlUser> = pool
         .create(("users", username.clone()))
-        .content(SqlUser { username, password })
+        .content(SqlUser {
+            username,
+            password_hash: hash(password, DEFAULT_COST).unwrap(),
+        })
         .await
         .map_err(|_| ServerFnError::new("Failed to create user"))?;
 
@@ -128,11 +128,11 @@ pub async fn login(
         use_context().ok_or_else(|| ServerFnError::new("Auth session missing"))?;
 
     // TODO: Handle invalid username inputs
-    let user = User::get(username, &pool)
+    let user = SqlUser::get(username, &pool)
         .await
         .ok_or_else(|| ServerFnError::new("User does not exist"))?;
 
-    if password != user.password {
+    if !verify(password, &user.password_hash).unwrap() {
         return Err(ServerFnError::new("Incorrect password"));
     }
 
@@ -152,11 +152,13 @@ pub async fn logout() -> Result<(), ServerFnError> {
     Ok(())
 }
 
+#[cfg(feature = "ssr")]
 #[cfg(test)]
 mod tests {
     // TODO: Make test code cleaner (better way to reset after post-testing)
     // NOTE: Tests requires server running
     use crate::auth::SqlUser;
+    use bcrypt::{hash, DEFAULT_COST};
     // use crate::settings;
     use reqwest;
     use surrealdb::{
@@ -194,11 +196,12 @@ mod tests {
     async fn init() {
         // Init test database
         let db = get_db().await;
+
         let _: Option<SqlUser> = db
             .create(("users", "login_test"))
             .content(SqlUser {
                 username: "login_test".to_string(),
-                password: "logintest123".to_string(),
+                password_hash: hash("logintest123", DEFAULT_COST).unwrap(),
             })
             .await
             .unwrap();
@@ -224,6 +227,13 @@ mod tests {
             .unwrap();
 
         assert!(res.status().is_success());
+
+        // Remove user to reset for future tests
+        let db = get_db().await;
+        let _: Option<SqlUser> = db
+            .delete(("users", "test"))
+            .await
+            .expect("User 'test' in table 'users'");
     }
 
     #[tokio::test]
@@ -253,16 +263,5 @@ mod tests {
             .unwrap();
 
         assert!(res.status().is_success());
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn reset() {
-        // Reset tests where necessary
-        let db = get_db().await;
-        let _: Option<SqlUser> = db
-            .delete(("users", "test"))
-            .await
-            .expect("User 'test' in table 'users'");
     }
 }
