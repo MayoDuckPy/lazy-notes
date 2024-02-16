@@ -127,8 +127,6 @@ async fn server_fn_handler(
     path: Path<String>,
     request: Request<Body>,
 ) -> impl IntoResponse {
-    log!("{:?}", path);
-
     handle_server_fns_with_context(
         move || {
             provide_context(auth_session.clone());

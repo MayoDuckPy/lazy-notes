@@ -57,28 +57,43 @@ pub fn Navbar() -> impl IntoView {
 
     let send_logout = create_server_action::<auth::Logout>();
 
+    let logo_link = {
+        if auth.is_authenticated() {
+            format!("/{}/notes/index.md", &auth.current_user.clone().expect("User not authenticated").username)
+        } else {
+            "/home".to_string()
+        }
+    };
+
+    // TODO: Hide nav on scroll down
+    // TODO: Add hamburger menu to open navigational sidebar on Notes component
     view! {
         <nav class="header_nav">
-            <p>"Lazy Notes"</p>
-            {move || if auth.is_authenticated() {
-                view! {
-                    <ActionForm action=send_logout>
-                        <input type="submit" value="Logout"/>
-                    </ActionForm>
-                }.into_view()
-            } else {
-                view! {
-                    <A href="/signup">"Signup"</A>
-                    <A href="/login">"Login"</A>
-                }.into_view()
-            }}
+            <section class="left_nav">
+                <A href={logo_link}>"Lazy Notes"</A>
+            </section>
+            // <section class="middle_nav">
+            // </section>
+            <section class="right_nav">
+                {move || if auth.is_authenticated() {
+                    view! {
+                        <ActionForm action=send_logout>
+                            <input class="logout_btn" type="submit" value="Log out"/>
+                        </ActionForm>
+                    }.into_view()
+                } else {
+                    view! {
+                        <A class="login_btn" href="/login">"Log in"</A>
+                        <A class="signup_btn" href="/signup">"Sign up"</A>
+                    }.into_view()
+                }}
+            </section>
         </nav>
     }
 }
 
 #[component]
 pub fn Signup() -> impl IntoView {
-    // let response: ResponseOptions = expect_context();
     let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
         expect_context();
 
@@ -162,7 +177,7 @@ pub fn Login() -> impl IntoView {
 pub fn HomePage() -> impl IntoView {
     view! {
         <Navbar/>
-        <article>
+        <article class="welcome">
             <h1>"Welcome to Lazy Notes"</h1>
         </article>
     }
@@ -213,8 +228,8 @@ pub fn Note() -> impl IntoView {
     };
 
     view! {
-        <article>
-            <nav>"Lazy Notes"</nav>
+        <Navbar/>
+        <article id="notes_wrapper">
             <article id="notes" inner_html=notes_as_html/>
         </article>
     }.into_view()
