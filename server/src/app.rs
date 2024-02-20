@@ -65,9 +65,30 @@ pub fn Navbar() -> impl IntoView {
         }
     };
 
-    // TODO: Hide nav on scroll down
     // TODO: Add hamburger menu to open navigational sidebar on Notes component
     view! {
+        // Use JS as it is far easier than wrangling wasm_bindgen
+        <Script>"
+            let lastY = 0;
+            let nav = null;
+
+            window.onload = () => {
+                lastY = window.scrollY;
+                nav = document.querySelector('nav.header_nav');
+            };
+
+            document.onscroll = ev => {
+                let isHidden = nav.classList[1] == 'hidden';
+                let y = window.scrollY;
+                if (y > lastY && !isHidden) {
+                    nav.className = 'header_nav hidden';
+                } else if (y < lastY && isHidden) {
+                    nav.className = 'header_nav';
+                }
+                lastY = y;
+            };
+        "
+        </Script>
         <nav class="header_nav">
             <section class="left_nav">
                 <A href={logo_link}>"Lazy Notes"</A>

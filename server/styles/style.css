@@ -27,10 +27,14 @@ body,
 main {
   margin: 0;
   padding: 0;
-  height: 100%;
 
   background-color: var(--black);
   color: var(--white);
+}
+
+html,
+body {
+  height: 100%;
 }
 
 #notes_wrapper {
@@ -223,6 +227,8 @@ main {
 }
 
 .header_nav {
+  --navbar-height: 3.5rem;
+
   position: sticky;
   top: 0;
 
@@ -230,10 +236,16 @@ main {
   gap: 1rem;
   align-items: center;
   padding-inline: 2rem;
-  min-height: 3.5rem;
+  height: var(--navbar-height);
 
   color: white;
   background-color: var(--dark-gray);
+  transition: top .25s ease-out;
+}
+
+.header_nav.hidden {
+  top: calc(var(--navbar-height) * -1);
+  transition: top .4s ease-in;
 }
 
 .header_nav > * {

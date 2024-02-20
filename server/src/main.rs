@@ -124,7 +124,7 @@ async fn leptos_routes_handler(
 async fn server_fn_handler(
     State(app_state): State<AppState>,
     auth_session: AuthSession<User, String, SessionSurrealPool<Client>, Surreal<Client>>,
-    path: Path<String>,
+    _path: Path<String>,
     request: Request<Body>,
 ) -> impl IntoResponse {
     handle_server_fns_with_context(
