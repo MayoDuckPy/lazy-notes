@@ -129,20 +129,19 @@ pub fn Signup() -> impl IntoView {
     let send_signup = create_server_action::<auth::Signup>();
 
     view! {
+        <Navbar/>
         <article class="signup">
             <ActionForm action=send_signup>
-                <label>
-                    "Username"
-                    <input name="username" pattern="[a-zA-Z0-9_-]*"/>
-                </label>
-                <label>
-                    "Password"
-                    <input name="password" type="password"/>
-                </label>
-                <label>
-                    "Password Confirmation"
-                    <input name="password_confirmation" type="password"/>
-                </label>
+                <h1>"Sign Up"</h1>
+                <label for="username">"Username"</label>
+                <input name="username" pattern="[a-zA-Z0-9_-]*"/>
+
+                <label for="password">"Password"</label>
+                <input name="password" type="password"/>
+
+                <label for="password_confirmation">"Password Confirmation"</label>
+                <input name="password_confirmation" type="password"/>
+
                 <input type="submit" value="Submit"/>
             </ActionForm>
             <ErrorBoundary fallback=move |_| view! { <p>"Incorrect field(s)"</p>}>
@@ -170,20 +169,19 @@ pub fn Login() -> impl IntoView {
     let response = send_login.value();
 
     view! {
+        <Navbar/>
         <article class="login">
             <ActionForm action=send_login>
-                <label>
-                    "Username"
-                    <input name="username" pattern="[a-zA-Z0-9_-]*"/>
-                </label>
-                <label>
-                    "Password"
-                    <input name="password" type="password"/>
-                </label>
-                // <label>
-                //     "Remember Me"
-                //     <input name="remember" type="radio"/>
-                // </label>
+                <h1>"Log In"</h1>
+                <label for="username">"Username"</label>
+                <input name="username" pattern="[a-zA-Z0-9_-]*"/>
+
+                <label for="password">"Password"</label>
+                <input name="password" type="password"/>
+
+                // <label for="remember">"Remember Me"</label>
+                // <input name="remember" type="radio"/>
+
                 <input type="submit" value="Submit"/>
             </ActionForm>
             <ErrorBoundary fallback=move |_| view! { <p>"Incorrect login"</p>}>

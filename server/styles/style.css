@@ -1,3 +1,4 @@
+/* TODO: Add more font styles */
 :root {
   --black: #141b1e;
   --dark-gray: #232a2d;
@@ -18,6 +19,9 @@
   --bg-code-block: var(--dark-gray);
   --url-foreground: var(--blue);
 
+  /* Components */
+  --navbar-height: 3.5rem;
+
   font-family: Roboto, serif;
   font-size: 110%;
 }
@@ -32,11 +36,136 @@ main {
   color: var(--white);
 }
 
-html,
-body {
+html, body {
   height: 100%;
 }
 
+
+/* Navbar */
+.header_nav {
+  position: sticky;
+  top: 0;
+
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding-inline: 2rem;
+  height: var(--navbar-height);
+
+  color: white;
+  background-color: var(--dark-gray);
+  transition: top .25s ease-out;
+}
+
+.header_nav.hidden {
+  top: calc(var(--navbar-height) * -1);
+  transition: top .4s ease-in;
+}
+
+.header_nav > * {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.left_nav {
+  margin-right: auto;
+}
+
+.left_nav > a {
+  margin: 0;
+
+  color: var(--white);
+  font-weight: bold;
+  font-size: 15pt;
+  text-decoration: none;
+}
+
+.right_nav {
+  gap: 1rem;
+  margin-left: auto;
+}
+
+.right_nav :where(input, a) {
+  border: none;
+
+  color: var(--white);
+  font-size: 12pt;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.logout_btn {
+  background: none;
+}
+
+.signup_btn {
+  padding: .4rem;
+
+  color: var(--black);
+  background-color: white;
+  border-radius: .15rem;
+}
+
+
+/* Welcome page */
+.welcome, .login, .signup {
+  padding: 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  box-sizing: border-box;
+}
+
+
+/* Login & Signup pages  */
+.login, .signup {
+  justify-content: center;
+
+  height: calc(100vh - var(--navbar-height));
+}
+
+:is(.login, .signup) > form {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+
+  background-color: white;
+  color: var(--black);
+  padding: 6rem 4rem;
+  border-radius: 1rem;
+  aspect-ratio: 1/1.25;
+}
+
+/* NOTE: Consider CSS nesting in the future */
+:is(.login, .signup) > form > h1 {
+  margin: 0 auto;
+}
+
+:is(.login, .signup) > form > label {
+  margin-top: 1.5em;
+}
+
+:is(.login, .signup) > form > input:nth-last-child(n+2) {
+  font-size: 16pt;
+  border: 1px solid gray;
+  border-radius: .2rem;
+}
+
+:is(.login, .signup) > form > input:last-child {
+  margin: 0 auto;
+  margin-top: 2rem;
+  padding: .5rem 1rem;
+
+  border: 1px solid black;
+  background-color: white;
+  font-size: 11pt;
+  cursor: pointer;
+}
+
+
+/* Notes pages */
 #notes_wrapper {
   min-height: 100%;
   box-sizing: border-box;
@@ -224,75 +353,4 @@ body {
   display: inline-block;
   font-family: var(--mono-font-family);
   padding: 0rem 0.25rem;
-}
-
-.header_nav {
-  --navbar-height: 3.5rem;
-
-  position: sticky;
-  top: 0;
-
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  padding-inline: 2rem;
-  height: var(--navbar-height);
-
-  color: white;
-  background-color: var(--dark-gray);
-  transition: top .25s ease-out;
-}
-
-.header_nav.hidden {
-  top: calc(var(--navbar-height) * -1);
-  transition: top .4s ease-in;
-}
-
-.header_nav > * {
-  display: flex;
-  align-items: center;
-  gap: .25rem;
-}
-
-.left_nav {
-  margin-right: auto;
-}
-
-.left_nav > a {
-  margin: 0;
-
-  color: var(--white);
-  font-weight: bold;
-  font-size: 15pt;
-  text-decoration: none;
-}
-
-.right_nav {
-  gap: 1rem;
-  margin-left: auto;
-}
-
-.right_nav :where(input, a) {
-  border: none;
-
-  color: var(--white);
-  font-size: 12pt;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.logout_btn {
-  background: none;
-}
-
-.signup_btn {
-  padding: .4rem;
-
-  color: var(--black);
-  background-color: white;
-  border-radius: .15rem;
-}
-
-.welcome {
-  padding: 4rem;
 }
