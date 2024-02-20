@@ -40,9 +40,15 @@ html, body {
   height: 100%;
 }
 
+main {
+  display: grid;
+  min-height: 100vh;
+  grid-template-rows: [navbar] var(--navbar-height) 1fr;
+}
 
 /* Navbar */
 .header_nav {
+  grid-row: navbar;
   position: sticky;
   top: 0;
 
@@ -50,7 +56,6 @@ html, body {
   gap: 1rem;
   align-items: center;
   padding-inline: 2rem;
-  height: var(--navbar-height);
 
   color: white;
   background-color: var(--dark-gray);
@@ -122,8 +127,6 @@ html, body {
 /* Login & Signup pages  */
 .login, .signup {
   justify-content: center;
-
-  height: calc(100vh - var(--navbar-height));
 }
 
 :is(.login, .signup) > form {
@@ -178,11 +181,9 @@ html, body {
   display: grid;
   grid-template-columns:
     minmax(0, 1fr) [content] 2fr minmax(0, 1fr);
-  width: 100%;
-  height: 100%;
 }
 
-#notes :first-child {
+#notes > h1:first-child {
   margin-top: 0;
 }
 
