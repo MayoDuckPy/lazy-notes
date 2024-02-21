@@ -46,6 +46,19 @@ main {
   grid-template-rows: [navbar] var(--navbar-height) 1fr;
 }
 
+form:invalid input[type="submit"] {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+input:is([name="username"], [name="password"], [name="password_confirmation"]):valid {
+  outline: 2px solid var(--green);
+}
+
+input:is([name="username"], [name="password"], [name="password_confirmation"]):required:user-invalid {
+  outline: 2px solid var(--red);
+}
+
 /* Navbar */
 .header_nav {
   grid-row: navbar;

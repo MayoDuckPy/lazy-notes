@@ -14,8 +14,10 @@ cfg_if!( if #[cfg(feature = "ssr")] {
     use axum_session_auth::{Authentication, AuthSession, SessionSurrealPool};
     use bcrypt::{hash, verify, DEFAULT_COST};
     use crate::settings::LazyNotesSettings;
+    use regex::Regex;
     use surrealdb::{engine::remote::ws::Client, Surreal};
     use std::fs::{create_dir_all, File};
+    use std::sync::OnceLock;
 
     impl User {
         pub async fn get(username: String, pool: &Surreal<Client>) -> Option<Self> {
@@ -76,6 +78,19 @@ cfg_if!( if #[cfg(feature = "ssr")] {
             }
         }
     }
+
+    fn validate_username(username: &str) -> bool {
+        // Setup regex validator with oncelock so it compiles only once
+        static VALID_TOKENS: OnceLock<Regex> = OnceLock::new();
+        let _ = VALID_TOKENS.set(Regex::new(r"[a-zA-Z0-9_-]+").expect("Invalid regex"));
+
+        let validator = VALID_TOKENS.get().expect("OnceLock was unset");
+        if let Some(mat) = validator.find(username) {
+            return username == mat.as_str();
+        }
+
+        false
+    }
 });
 
 /// API endpoint which handles user signups.
@@ -90,6 +105,10 @@ pub async fn signup(
 
     if let Some(_user) = User::get(username.clone(), &pool).await {
         return Err(ServerFnError::new("Username is taken"));
+    }
+
+    if !validate_username(&username) {
+        return Err(ServerFnError::new("Username is invalid"));
     }
 
     if password != password_confirmation {
@@ -127,10 +146,13 @@ pub async fn login(
     let auth: AuthSession<User, String, SessionSurrealPool<Client>, Surreal<Client>> =
         use_context().ok_or_else(|| ServerFnError::new("Auth session missing"))?;
 
-    // TODO: Handle invalid username inputs
-    let user = SqlUser::get(username, &pool)
+    let user = SqlUser::get(username.clone(), &pool)
         .await
         .ok_or_else(|| ServerFnError::new("User does not exist"))?;
+
+    if !validate_username(&username) {
+        return Err(ServerFnError::new("Username is invalid"));
+    }
 
     if !verify(password, &user.password_hash).unwrap() {
         return Err(ServerFnError::new("Incorrect password"));

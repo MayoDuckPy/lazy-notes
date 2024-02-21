@@ -134,13 +134,13 @@ pub fn Signup() -> impl IntoView {
             <ActionForm action=send_signup>
                 <h1>"Sign Up"</h1>
                 <label for="username">"Username"</label>
-                <input name="username" pattern="[a-zA-Z0-9_-]*"/>
+                <input name="username" pattern="[a-zA-Z0-9_\\-]+" required/>
 
                 <label for="password">"Password"</label>
-                <input name="password" type="password"/>
+                <input name="password" type="password" required/>
 
                 <label for="password_confirmation">"Password Confirmation"</label>
-                <input name="password_confirmation" type="password"/>
+                <input name="password_confirmation" type="password" required/>
 
                 <input type="submit" value="Submit"/>
             </ActionForm>
@@ -174,10 +174,10 @@ pub fn Login() -> impl IntoView {
             <ActionForm action=send_login>
                 <h1>"Log In"</h1>
                 <label for="username">"Username"</label>
-                <input name="username" pattern="[a-zA-Z0-9_-]*"/>
+                <input name="username" pattern="[a-zA-Z0-9_\\-]+" required/>
 
                 <label for="password">"Password"</label>
-                <input name="password" type="password"/>
+                <input name="password" type="password" required/>
 
                 // <label for="remember">"Remember Me"</label>
                 // <input name="remember" type="radio"/>
