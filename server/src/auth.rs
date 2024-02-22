@@ -179,7 +179,7 @@ pub async fn logout() -> Result<(), ServerFnError> {
 mod tests {
     // TODO: Make test code cleaner (better way to reset after post-testing)
     // NOTE: Tests requires server running
-    use crate::auth::SqlUser;
+    use crate::auth::{validate_username, SqlUser};
     use bcrypt::{hash, DEFAULT_COST};
     // use crate::settings;
     use reqwest;
@@ -189,8 +189,8 @@ mod tests {
         Surreal,
     };
 
+    /// Get database client from test config
     async fn get_db() -> Surreal<Client> {
-        // Get database client from test config
         // let ln_config = settings::get_configuration("tests/test_settings.toml")
         //     .expect("Failed to read configuration file");
         // let db_settings = ln_config.database;
@@ -213,10 +213,10 @@ mod tests {
         db
     }
 
+    /// Init test database
     #[tokio::test]
     #[ignore]
     async fn init() {
-        // Init test database
         let db = get_db().await;
 
         let _: Option<SqlUser> = db
@@ -229,9 +229,9 @@ mod tests {
             .unwrap();
     }
 
+    /// Test we can signup an account with the api endpoint
     #[tokio::test]
     async fn test_signup() {
-        // Test we can signup an account with the api endpoint
         let client = reqwest::Client::new();
         let username = "test";
         let password = "test123";
@@ -255,12 +255,12 @@ mod tests {
         let _: Option<SqlUser> = db
             .delete(("users", "test"))
             .await
-            .expect("User 'test' in table 'users'");
+            .expect("User 'test' not in table 'users'");
     }
 
+    /// Test we can log into an account with the api endpoint
     #[tokio::test]
     async fn test_login_logout() {
-        // Test we can log into an account with the api endpoint
         let client = reqwest::Client::builder()
             .cookie_store(true)
             .build()
@@ -285,5 +285,30 @@ mod tests {
             .unwrap();
 
         assert!(res.status().is_success());
+    }
+
+    /// Test username validation
+    #[tokio::test]
+    async fn test_username_validation() {
+        let usernames = [
+            ("", false),
+            (" ", false),
+            ("=", false),
+            ("==", false),
+            ("_", true),
+            ("_-", true),
+            ("bob ", false),
+            ("bob 123", false),
+            ("bob", true),
+            ("123bob", true),
+            ("bob123", true),
+            ("_bob", true),
+            ("bob-", true),
+            ("-bob_", true),
+        ];
+
+        for (username, expectation) in usernames {
+            assert_eq!(validate_username(username), expectation);
+        }
     }
 }
