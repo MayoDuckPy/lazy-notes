@@ -11,9 +11,7 @@
   --light-gray: #b3b9b8;
   --white: #dadada;
 
-  --ui-transition-time: 200ms;
-
-  --mono-font-family: "Iosevka Term", Monaco, "Courier New", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", monospace;
+  --mono-font-family: "Iosevka Term", Monaco, "Courier New", "Courier", monospace;
 
   --bg-inline-code: var(--dark-gray);
   --bg-code-block: var(--dark-gray);
@@ -21,8 +19,11 @@
 
   /* Components */
   --navbar-height: 3.5rem;
+  --sidebar-width: 15vw;
+  --sidebar-anim-time: 150ms;
 
-  font-family: Roboto, serif;
+
+  font-family: Helvetica, Arial, serif;
   font-size: 110%;
 }
 
@@ -43,7 +44,9 @@ html, body {
 main {
   display: grid;
   min-height: 100vh;
-  grid-template-rows: [navbar] var(--navbar-height) 1fr;
+  grid-template:
+    "navbar" var(--navbar-height)
+    "content" 1fr;
 }
 
 form:invalid input[type="submit"] {
@@ -59,25 +62,48 @@ input:is([name="username"], [name="password"], [name="password_confirmation"]):r
   outline: 2px solid var(--red);
 }
 
+
+/* Logo */
+a#logo {
+  margin: 0;
+
+  user-select: none;
+  color: var(--white);
+  font-weight: bold;
+  font-size: 15pt;
+  text-decoration: none;
+}
+
+
 /* Navbar */
 .header_nav {
-  grid-row: navbar;
+  grid-area: navbar;
   position: sticky;
   top: 0;
 
   display: flex;
   gap: 1rem;
   align-items: center;
-  padding-inline: 2rem;
+  padding-inline: 1.25rem;
 
   color: white;
-  background-color: var(--dark-gray);
-  transition: top .25s ease-out;
+  background-color: var(--black);
+  border-bottom: 2px solid var(--dark-gray);
 }
 
 .header_nav.hidden {
   top: calc(var(--navbar-height) * -1);
-  transition: top .4s ease-in;
+}
+
+/* Navbar animations */
+@media (prefers-reduced-motion: no-preference) {
+  .header_nav {
+    transition: top .25s ease-out;
+  }
+
+  .header_nav.hidden {
+    transition: top .4s ease-in;
+  }
 }
 
 .header_nav > * {
@@ -88,15 +114,7 @@ input:is([name="username"], [name="password"], [name="password_confirmation"]):r
 
 .left_nav {
   margin-right: auto;
-}
-
-.left_nav > a {
-  margin: 0;
-
-  color: var(--white);
-  font-weight: bold;
-  font-size: 15pt;
-  text-decoration: none;
+  gap: .75rem;
 }
 
 .right_nav {
@@ -128,6 +146,8 @@ input:is([name="username"], [name="password"], [name="password_confirmation"]):r
 
 /* Welcome page */
 .welcome, .login, .signup {
+  grid-area: content;
+
   padding: 4rem;
   display: flex;
   flex-direction: column;
@@ -163,6 +183,7 @@ input:is([name="username"], [name="password"], [name="password_confirmation"]):r
   margin-top: 1.5em;
 }
 
+/* All inputs in form except last */
 :is(.login, .signup) > form > input:nth-last-child(n+2) {
   font-size: 16pt;
   border: 1px solid gray;
@@ -181,8 +202,85 @@ input:is([name="username"], [name="password"], [name="password_confirmation"]):r
 }
 
 
+/* Table of Contents */
+label#toc_revealer {
+  user-select: none;
+  cursor: pointer;
+
+  font-size: 24pt;
+}
+
+nav#toc_wrapper {
+  grid-area: content;
+  display: flex;
+
+  width: var(--sidebar-width);
+  height: calc(100vh - var(--navbar-height));
+  box-sizing: border-box;
+  padding: 1rem;
+  padding-right: 1.5rem;
+
+  color: white;
+  background-color: var(--dark-gray);
+  font-size: 12pt;
+
+  /* Place outside of viewport while inactive */
+  position: fixed;
+  top: var(--navbar-height);
+  pointer-events: none;
+  translate: calc(var(--sidebar-width) * -1) 0;
+}
+
+#toc_state:checked ~ nav#toc_wrapper {
+  /* Bring element back */
+  position: sticky;
+  pointer-events: auto;
+  translate: 0;
+}
+
+#toc_state:checked ~ article#notes_wrapper {
+  margin-left: var(--sidebar-width);
+}
+
+/* Sidebar animations */
+@media (prefers-reduced-motion: no-preference) {
+  nav#toc_wrapper {
+    transition: translate var(--sidebar-anim-time) ease-in;
+  }
+
+  #toc_state:checked ~ nav#toc_wrapper {
+    transition: translate var(--sidebar-anim-time) ease-out;
+  }
+
+  #notes_wrapper {
+    transition: margin var(--sidebar-anim-time) ease-in;
+  }
+}
+
+ul#toc, ul#toc > * {
+  margin-top: .75em;
+}
+
+ul#toc {
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+ul#toc > * {
+  display: block;
+}
+
+ul#toc a {
+  color: inherit;
+  text-decoration: none;
+}
+
+
 /* Notes pages */
 #notes_wrapper {
+  grid-area: content;
+
   min-height: 100%;
   box-sizing: border-box;
   margin: 0;
@@ -193,7 +291,7 @@ input:is([name="username"], [name="password"], [name="password_confirmation"]):r
 #notes {
   display: grid;
   grid-template-columns:
-    minmax(0, 1fr) [content] 2fr minmax(0, 1fr);
+    minmax(0, 1fr) [content] minmax(min(90ch, 100%), 1fr) minmax(0, 1fr);
 }
 
 #notes > h1:first-child {

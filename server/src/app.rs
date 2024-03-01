@@ -3,7 +3,7 @@ use cfg_if::cfg_if;
 // Tell rustc that components use ssr with islands enabled
 cfg_if! { if #[cfg(feature = "ssr")] {
 use axum_session_auth::{AuthSession, SessionSurrealPool};
-use ammonia::Builder;
+use ammonia::{is_html, Builder};
 use crate::auth;
 use crate::settings::LazyNotesSettings;
 use http::StatusCode;
@@ -12,7 +12,8 @@ use leptos_meta::*;
 use leptos_router::*;
 use leptos_axum::ResponseOptions;
 use pulldown_cmark::{html, Options, Parser};
-use std::fs::read_to_string;
+use regex::Regex;
+use std::{fs::read_to_string, sync::OnceLock};
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
 #[derive(Clone, Params, PartialEq)]
@@ -51,12 +52,11 @@ pub fn App() -> impl IntoView {
 }
 
 #[component]
-pub fn Navbar() -> impl IntoView {
+pub fn Logo() -> impl IntoView {
     let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
         expect_context();
 
-    let send_logout = create_server_action::<auth::Logout>();
-
+    // Construct logo
     let logo_link = {
         if auth.is_authenticated() {
             format!("/{}/notes/index.md", &auth.current_user.clone().expect("User not authenticated").username)
@@ -65,10 +65,37 @@ pub fn Navbar() -> impl IntoView {
         }
     };
 
-    // TODO: Add hamburger menu to open navigational sidebar on Notes component
+    view! { <A id="logo" href={logo_link}>"Lazy Notes"</A> }
+}
+
+#[component]
+pub fn TocSidebar(toc: Vec<(u8, Box<str>)>) -> impl IntoView {
+
+    view! {
+        <nav id="toc_wrapper">
+            <ul id="toc">
+             {toc.clone().into_iter()
+                 .map(move |(heading, section)| view! { <li><a href={format!("#{section}")}>{format!("{heading}. {section}")}</a></li> })
+                 .collect_view()}
+            </ul>
+        </nav>
+    }
+}
+
+#[component]
+pub fn Navbar() -> impl IntoView {
+    let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
+        expect_context();
+
+    let toc_context: Option<Vec<(u8, Box<str>)>> = use_context();
+    let toc_visible = toc_context.clone().is_some_and(|v| !v.is_empty());
+
+    let send_logout = create_server_action::<auth::Logout>();
+
     view! {
         // Use JS as it is far easier than wrangling wasm_bindgen
-        <Script>"
+        <Script>
+        "
             let lastY = 0;
             let nav = null;
 
@@ -80,7 +107,7 @@ pub fn Navbar() -> impl IntoView {
             document.onscroll = ev => {
                 let isHidden = nav.classList[1] == 'hidden';
                 let y = window.scrollY;
-                if (y > lastY && !isHidden) {
+                if (y > lastY && !isHidden && !document.querySelector('#toc_state:checked')) {
                     nav.className = 'header_nav hidden';
                 } else if (y < lastY && isHidden) {
                     nav.className = 'header_nav';
@@ -89,12 +116,22 @@ pub fn Navbar() -> impl IntoView {
             };
         "
         </Script>
+        <Show when=move || toc_visible>
+            // Having this outside instead of nested makes CSS easier
+            <input type="checkbox" id="toc_state" style="display: none !important"/>
+        </Show>
         <nav class="header_nav">
             <section class="left_nav">
-                <A href={logo_link}>"Lazy Notes"</A>
+                <Show when=move || toc_visible
+                      fallback=Logo>
+                    <label for="toc_state" id="toc_revealer">"≡"</label>
+                </Show>
             </section>
-            // <section class="middle_nav">
-            // </section>
+            <section class="middle_nav">
+                <Show when=move || toc_visible>
+                    <Logo/>
+                </Show>
+            </section>
             <section class="right_nav">
                 {move || if auth.is_authenticated() {
                     view! {
@@ -110,6 +147,9 @@ pub fn Navbar() -> impl IntoView {
                 }}
             </section>
         </nav>
+        <Show when=move || toc_visible>
+            <TocSidebar toc=toc_context.clone().unwrap()/>
+        </Show>
     }
 }
 
@@ -225,7 +265,7 @@ pub fn Note() -> impl IntoView {
         }
     }
 
-    let notes_as_html = move || {
+    let notes_as_html = {
         let mut notes = "File not found".to_string();
         if let Ok(path) = params.with(|params| params.clone().map(move |params| params.path.clone())) {
             let mut ext = String::new();
@@ -246,8 +286,13 @@ pub fn Note() -> impl IntoView {
         convert_to_html(&notes)
     };
 
+    // Should only fail if bad HTML which should not happen due to sanitization
+    let toc = generate_toc(&notes_as_html).unwrap();
+
     view! {
-        <Navbar/>
+        <Provider value=toc>
+            <Navbar/>
+        </Provider>
         <article id="notes_wrapper">
             <article id="notes" inner_html=notes_as_html/>
         </article>
@@ -274,6 +319,13 @@ fn convert_to_html(md_input: &str) -> String {
     // TODO: Allow specifying allowed tags in settings.toml
     // TODO: Add MathML specs
     Builder::default()
+        // TODO: Prefix classes and ids to prevent conflicts (strip prefix in TOC)
+        .add_tag_attributes("h1", &["class", "id"])
+        .add_tag_attributes("h2", &["class", "id"])
+        .add_tag_attributes("h3", &["class", "id"])
+        .add_tag_attributes("h4", &["class", "id"])
+        .add_tag_attributes("h5", &["class", "id"])
+        .add_tag_attributes("h6", &["class", "id"])
         .add_tags(&["audio"])
         .add_tag_attributes("video", &["src", "autoplay", "loop", "controls", "muted"])
         .add_tags(&["video"])
@@ -284,4 +336,61 @@ fn convert_to_html(md_input: &str) -> String {
         .clean(&dirty_md)
         .to_string()
 }
+
+/// Get the table of contents from HTML by parsing heading element ids.
+fn generate_toc(html: &str) -> Result<Vec<(u8, Box<str>)>, String> {
+    /* NOTE: Uses regex instead of HTML parser as headings only have ids and classes.
+             Use parser if more attributes are added. */
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    let re = REGEX.get_or_init(|| Regex::new(r#"<h([1-6])(?: class="[^"]*")? id="([^"]+)"(?: class="[^"]*")?>"#).expect("Invalid regex"));
+
+    if !is_html(html) {
+        return Err("Invalid HTML".to_string());
+    }
+
+    let mut toc = Vec::new();
+    for (_, [heading, id]) in re.captures_iter(html).map(|c| c.extract()) {
+        toc.push((heading.parse::<u8>().expect("Impossible HTML heading"), Box::from(id)));
+    }
+
+    Ok(toc)
+}
 }}
+
+#[cfg(feature = "ssr")]
+#[cfg(test)]
+mod tests {
+    use crate::app::generate_toc;
+
+    #[test]
+    fn test_toc_generation() {
+        let invalid_html = "# Markdown Title";
+        let basic_html = r#"<h1 id="test"></h1>"#;
+        let html_no_id = r#"<h1></h1>"#;
+        let html_only_class = r#"<h1 class="test"></h1>"#;
+        let html_with_class_at_start = r#"<h1 class="class" id="test"></h1>"#;
+        let html_with_class_at_end = r#"<h1 id="test" class="class"></h1>"#;
+        let long_html = r#"<h1 id="test"></h1><h2 class="fail"></h2><h5 id="test2" class="success"></h5><h6 class="success" id="test3"></h6>"#;
+
+        assert_eq!(generate_toc(invalid_html), Err("Invalid HTML".to_string()));
+        assert_eq!(generate_toc(basic_html), Ok(vec![(1, Box::from("test"))]));
+        assert_eq!(generate_toc(html_no_id), Ok(vec![]));
+        assert_eq!(generate_toc(html_only_class), Ok(vec![]));
+        assert_eq!(
+            generate_toc(html_with_class_at_start),
+            Ok(vec![(1, Box::from("test"))])
+        );
+        assert_eq!(
+            generate_toc(html_with_class_at_end),
+            Ok(vec![(1, Box::from("test"))])
+        );
+        assert_eq!(
+            generate_toc(long_html),
+            Ok(vec![
+                (1, Box::from("test")),
+                (5, Box::from("test2")),
+                (6, Box::from("test3"))
+            ])
+        );
+    }
+}

@@ -82,9 +82,8 @@ cfg_if!( if #[cfg(feature = "ssr")] {
     fn validate_username(username: &str) -> bool {
         // Setup regex validator with oncelock so it compiles only once
         static VALID_TOKENS: OnceLock<Regex> = OnceLock::new();
-        let _ = VALID_TOKENS.set(Regex::new(r"[a-zA-Z0-9_-]+").expect("Invalid regex"));
+        let validator = VALID_TOKENS.get_or_init(|| Regex::new(r"[a-zA-Z0-9_-]+").expect("Invalid regex"));
 
-        let validator = VALID_TOKENS.get().expect("OnceLock was unset");
         if let Some(mat) = validator.find(username) {
             return username == mat.as_str();
         }
@@ -182,7 +181,6 @@ mod tests {
     use crate::auth::{validate_username, SqlUser};
     use bcrypt::{hash, DEFAULT_COST};
     // use crate::settings;
-    use reqwest;
     use surrealdb::{
         engine::remote::ws::{Client, Ws},
         opt::auth::Namespace,
@@ -288,8 +286,8 @@ mod tests {
     }
 
     /// Test username validation
-    #[tokio::test]
-    async fn test_username_validation() {
+    #[test]
+    fn test_username_validation() {
         let usernames = [
             ("", false),
             (" ", false),
