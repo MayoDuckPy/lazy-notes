@@ -19,7 +19,7 @@
 
   /* Components */
   --navbar-height: 3.5rem;
-  --sidebar-width: 15vw;
+  --sidebar-width: 25vw;
   --sidebar-anim-time: 150ms;
 
 
@@ -212,13 +212,14 @@ label#toc_revealer {
 
 nav#toc_wrapper {
   grid-area: content;
-  display: flex;
 
   width: var(--sidebar-width);
   height: calc(100vh - var(--navbar-height));
   box-sizing: border-box;
   padding: 1rem;
   padding-right: 1.5rem;
+  overflow-y: scroll;
+  word-break: break-all;
 
   color: white;
   background-color: var(--dark-gray);
@@ -257,17 +258,17 @@ nav#toc_wrapper {
   }
 }
 
-ul#toc, ul#toc > * {
-  margin-top: .75em;
-}
-
 ul#toc {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: .75em;
+
   margin: 0;
   padding: 0;
 }
 
 ul#toc > * {
+  /* Remove list markers */
   display: block;
 }
 
@@ -385,9 +386,9 @@ ul#toc a {
 
 #notes pre {
   border: 0.05rem solid white;
+  max-width: 100%;
   background-color: var(--bg-code-block);
   border-radius: 0.5rem;
-  font-family: var(--mono-font-family);
   font-size: 0.8rem;
   padding: 0.5rem 1rem;
 }
@@ -444,6 +445,7 @@ ul#toc a {
 
 #notes code {
   font-family: var(--mono-font-family);
+  white-space: normal;
 }
 
 /* Anchor Tags */
@@ -460,9 +462,7 @@ ul#toc a {
 
 /* Inline code blocks */
 #notes :is(p, li, ul)>code {
-  background-clip: padding-box;
   background-color: var(--bg-inline-code);
   display: inline-block;
-  font-family: var(--mono-font-family);
   padding: 0rem 0.25rem;
 }
