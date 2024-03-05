@@ -6,20 +6,107 @@ use axum_session_auth::{AuthSession, SessionSurrealPool};
 use ammonia::{is_html, Builder};
 use crate::auth;
 use crate::settings::LazyNotesSettings;
+use html5ever::{
+    ATOM_LOCALNAME__68_31 as TOKEN_H1,
+    ATOM_LOCALNAME__68_32 as TOKEN_H2,
+    ATOM_LOCALNAME__68_33 as TOKEN_H3,
+    ATOM_LOCALNAME__68_34 as TOKEN_H4,
+    ATOM_LOCALNAME__68_35 as TOKEN_H5,
+    ATOM_LOCALNAME__68_36 as TOKEN_H6,
+    ATOM_LOCALNAME__63_6C_61_73_73 as TOKEN_CLASS,
+    ATOM_LOCALNAME__69_64 as TOKEN_ID,
+    tendril::StrTendril,
+    tokenizer::{BufferQueue, Token, Tokenizer, TokenSink, TokenSinkResult, Tag, TagKind},
+};
 use http::StatusCode;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use leptos_axum::ResponseOptions;
 use pulldown_cmark::{html, Options, Parser};
-use regex::Regex;
-use std::{fs::read_to_string, sync::OnceLock};
+use std::fs::read_to_string;
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
 #[derive(Clone, Params, PartialEq)]
 struct NotesParams {
     user: String,
     path: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TocHeading {
+    level: u8,
+    class: Option<Box<str>>,
+    id: Option<Box<str>>,
+    text: Option<Box<str>>
+}
+
+impl TocHeading {
+    fn set_text(&mut self, text: &str) {
+        self.text = Some(Box::from(text));
+    }
+}
+
+struct TocSink {
+    headings: Vec<TocHeading>
+}
+
+impl TokenSink for TocSink {
+    type Handle = ();
+
+    fn process_token(&mut self, token: Token, _line_number: u64) -> TokenSinkResult<Self::Handle> {
+        match token {
+            Token::TagToken(Tag {
+                kind: TagKind::StartTag,
+                name,
+                self_closing: false,
+                attrs
+            }) => {
+                if [TOKEN_H1, TOKEN_H2, TOKEN_H3, TOKEN_H4, TOKEN_H5, TOKEN_H6].contains(&name) {
+                    let level = match name {
+                        TOKEN_H1 => 1,
+                        TOKEN_H2 => 2,
+                        TOKEN_H3 => 3,
+                        TOKEN_H4 => 4,
+                        TOKEN_H5 => 5,
+                        TOKEN_H6 => 6,
+                        _ => 0,  // Impossible
+                    };
+
+                    let class = attrs
+                        .iter()
+                        .find(|a| a.name.local == TOKEN_CLASS)
+                        .map(|a| Some(Box::from(a.value.to_string())))
+                        .unwrap_or_else(|| None);
+
+                    let id = attrs
+                        .iter()
+                        .find(|a| a.name.local == TOKEN_ID)
+                        .map(|a| Some(Box::from(a.value.to_string())))
+                        .unwrap_or_else(|| None);
+
+                    self.headings.push(TocHeading {
+                        level,
+                        class,
+                        id,
+                        text: None
+                    });
+                }
+            },
+            Token::CharacterTokens(string) => {
+                if let Some(heading) = self.headings.last_mut() {
+                    if heading.text.is_some() {
+                        return TokenSinkResult::Continue;
+                    }
+
+                    heading.set_text(&string);
+                }
+            }
+            _ => {},
+        };
+
+        TokenSinkResult::Continue
+    }
 }
 
 #[component]
@@ -69,13 +156,13 @@ pub fn Logo() -> impl IntoView {
 }
 
 #[component]
-pub fn TocSidebar(toc: Vec<(u8, Box<str>)>) -> impl IntoView {
+pub fn TocSidebar(toc: Vec<TocHeading>) -> impl IntoView {
 
     view! {
         <nav id="toc_wrapper">
             <ul id="toc">
              {toc.clone().into_iter()
-                 .map(move |(heading, section)| view! { <li><a href={format!("#{section}")}>{format!("{heading}. {section}")}</a></li> })
+                 .map(move |heading| view! { <li><a href={format!("#{}", heading.id.unwrap_or_else(|| "".into()))}>{format!("{}. {}", heading.level, heading.text.unwrap_or_else(|| "".into()))}</a></li> })
                  .collect_view()}
             </ul>
         </nav>
@@ -87,7 +174,7 @@ pub fn Navbar() -> impl IntoView {
     let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
         expect_context();
 
-    let toc_context: Option<Vec<(u8, Box<str>)>> = use_context();
+    let toc_context: Option<Vec<TocHeading>> = use_context();
     let toc_visible = toc_context.clone().is_some_and(|v| !v.is_empty());
 
     let send_logout = create_server_action::<auth::Logout>();
@@ -337,30 +424,31 @@ fn convert_to_html(md_input: &str) -> String {
         .to_string()
 }
 
-/// Get the table of contents from HTML by parsing heading element ids.
-fn generate_toc(html: &str) -> Result<Vec<(u8, Box<str>)>, String> {
-    /* NOTE: Uses regex instead of HTML parser as headings only have ids and classes.
-             Use parser if more attributes are added. */
-    static REGEX: OnceLock<Regex> = OnceLock::new();
-    let re = REGEX.get_or_init(|| Regex::new(r#"<h([1-6])(?: class="[^"]*")? id="([^"]+)"(?: class="[^"]*")?>"#).expect("Invalid regex"));
-
+/// Generate a table of contents from HTML by parsing heading elements.
+fn generate_toc(html: &str) -> Result<Vec<TocHeading>, String> {
     if !is_html(html) {
         return Err("Invalid HTML".to_string());
     }
 
-    let mut toc = Vec::new();
-    for (_, [heading, id]) in re.captures_iter(html).map(|c| c.extract()) {
-        toc.push((heading.parse::<u8>().expect("Impossible HTML heading"), Box::from(id)));
-    }
+    let sink = TocSink { headings: Vec::new() };
 
-    Ok(toc)
+    // Prepare input
+    let mut input = BufferQueue::new();
+    input.push_back(StrTendril::from_slice(html));
+
+    // Parse
+    let mut tokenizer = Tokenizer::new(sink, Default::default());
+    let _ = tokenizer.feed(&mut input);
+    tokenizer.end();
+
+    Ok(tokenizer.sink.headings)
 }
 }}
 
 #[cfg(feature = "ssr")]
 #[cfg(test)]
 mod tests {
-    use crate::app::generate_toc;
+    use crate::app::{generate_toc, TocHeading};
 
     #[test]
     fn test_toc_generation() {
@@ -370,26 +458,109 @@ mod tests {
         let html_only_class = r#"<h1 class="test"></h1>"#;
         let html_with_class_at_start = r#"<h1 class="class" id="test"></h1>"#;
         let html_with_class_at_end = r#"<h1 id="test" class="class"></h1>"#;
-        let long_html = r#"<h1 id="test"></h1><h2 class="fail"></h2><h5 id="test2" class="success"></h5><h6 class="success" id="test3"></h6>"#;
+        let html_with_text = r#"<h1>test</h1>"#;
+        let html_with_text_and_attrs = r#"<h1 id="test" class="test">test</h1>"#;
+        let long_html = r#"<h1 id="test"></h1><h2 class="hello">hello</h2><h5 id="test2" class="success"></h5><h6 class="success" id="test3">test3</h6>"#;
 
         assert_eq!(generate_toc(invalid_html), Err("Invalid HTML".to_string()));
-        assert_eq!(generate_toc(basic_html), Ok(vec![(1, Box::from("test"))]));
-        assert_eq!(generate_toc(html_no_id), Ok(vec![]));
-        assert_eq!(generate_toc(html_only_class), Ok(vec![]));
+
+        assert_eq!(
+            generate_toc(basic_html),
+            Ok(vec![TocHeading {
+                level: 1,
+                class: None,
+                id: Some(Box::from("test")),
+                text: None
+            }])
+        );
+
+        assert_eq!(
+            generate_toc(html_no_id),
+            Ok(vec![TocHeading {
+                level: 1,
+                class: None,
+                id: None,
+                text: None
+            }])
+        );
+
+        assert_eq!(
+            generate_toc(html_only_class),
+            Ok(vec![TocHeading {
+                level: 1,
+                class: Some(Box::from("test")),
+                id: None,
+                text: None
+            }])
+        );
+
         assert_eq!(
             generate_toc(html_with_class_at_start),
-            Ok(vec![(1, Box::from("test"))])
+            Ok(vec![TocHeading {
+                level: 1,
+                class: Some(Box::from("class")),
+                id: Some(Box::from("test")),
+                text: None
+            }])
         );
+
         assert_eq!(
             generate_toc(html_with_class_at_end),
-            Ok(vec![(1, Box::from("test"))])
+            Ok(vec![TocHeading {
+                level: 1,
+                class: Some(Box::from("class")),
+                id: Some(Box::from("test")),
+                text: None
+            }])
         );
+
+        assert_eq!(
+            generate_toc(html_with_text),
+            Ok(vec![TocHeading {
+                level: 1,
+                class: None,
+                id: None,
+                text: Some(Box::from("test"))
+            }])
+        );
+
+        assert_eq!(
+            generate_toc(html_with_text_and_attrs),
+            Ok(vec![TocHeading {
+                level: 1,
+                class: Some(Box::from("test")),
+                id: Some(Box::from("test")),
+                text: Some(Box::from("test"))
+            }])
+        );
+
         assert_eq!(
             generate_toc(long_html),
             Ok(vec![
-                (1, Box::from("test")),
-                (5, Box::from("test2")),
-                (6, Box::from("test3"))
+                TocHeading {
+                    level: 1,
+                    class: None,
+                    id: Some(Box::from("test")),
+                    text: None
+                },
+                TocHeading {
+                    level: 2,
+                    class: Some(Box::from("hello")),
+                    id: None,
+                    text: Some(Box::from("hello"))
+                },
+                TocHeading {
+                    level: 5,
+                    class: Some(Box::from("success")),
+                    id: Some(Box::from("test2")),
+                    text: None
+                },
+                TocHeading {
+                    level: 6,
+                    class: Some(Box::from("success")),
+                    id: Some(Box::from("test3")),
+                    text: Some(Box::from("test3"))
+                }
             ])
         );
     }

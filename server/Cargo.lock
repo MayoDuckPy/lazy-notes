@@ -2150,6 +2150,7 @@ dependencies = [
  "console_error_panic_hook",
  "console_log",
  "futures",
+ "html5ever",
  "http 1.0.0",
  "hyper 1.2.0",
  "leptos",
