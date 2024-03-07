@@ -285,6 +285,7 @@ pub fn Signup() -> impl IntoView {
     }
 
     let send_signup = create_server_action::<auth::Signup>();
+    let response = send_signup.value();
 
     view! {
         <Navbar/>
@@ -300,11 +301,15 @@ pub fn Signup() -> impl IntoView {
                 <label for="password_confirmation">"Password Confirmation"</label>
                 <input name="password_confirmation" type="password" required/>
 
+                <ErrorBoundary
+                    fallback=move |_| view! {
+                        <p class="error">"Incorrect field(s)"</p>
+                    }>
+                    <p>{response}</p>
+                </ErrorBoundary>
+
                 <input type="submit" value="Submit"/>
             </ActionForm>
-            <ErrorBoundary fallback=move |_| view! { <p>"Incorrect field(s)"</p>}>
-                <p></p>
-            </ErrorBoundary>
         </article>
     }
 }
@@ -340,11 +345,15 @@ pub fn Login() -> impl IntoView {
                 // <label for="remember">"Remember Me"</label>
                 // <input name="remember" type="radio"/>
 
+                <ErrorBoundary
+                    fallback=move |_| view! {
+                        <p class="error">"Incorrect username or password"</p>
+                    }>
+                    <p>{response}</p>
+                </ErrorBoundary>
+
                 <input type="submit" value="Submit"/>
             </ActionForm>
-            <ErrorBoundary fallback=move |_| view! { <p>"Incorrect login"</p>}>
-                <p>{response}</p>
-            </ErrorBoundary>
         </article>
     }
 }

@@ -162,16 +162,21 @@ a#logo {
   justify-content: center;
 }
 
+.error {
+  color: var(--red);
+}
+
 :is(.login, .signup) > form {
   display: flex;
   flex-direction: column;
   gap: .75rem;
 
-  background-color: white;
-  color: var(--black);
   padding: 6rem 4rem;
   border-radius: 1rem;
   aspect-ratio: 1/1.25;
+
+  background-color: white;
+  color: var(--black);
 }
 
 /* NOTE: Consider CSS nesting in the future */
@@ -181,6 +186,10 @@ a#logo {
 
 :is(.login, .signup) > form > label {
   margin-top: 1.5em;
+}
+
+:is(.login, .signup) > form > p {
+  margin: 0;
 }
 
 /* All inputs in form except last */
