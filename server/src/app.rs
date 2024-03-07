@@ -157,14 +157,45 @@ pub fn Logo() -> impl IntoView {
 
 #[component]
 pub fn TocSidebar(toc: Vec<TocHeading>) -> impl IntoView {
+    if toc.is_empty() {
+        return view! {
+            <nav id="toc_wrapper">
+                <ul id="toc"/>
+            </nav>
+        }
+    }
+
+    let mut toc_tree = String::new();
+    let mut last_heading: u8 = toc[0].level;
+    let mut nest_count: u8 = 0;
+
+    // Construct TOC list manually (safe because classes and ids are sanitized)
+    for heading in toc {
+        let id = heading.id.unwrap_or_else(|| "".into());
+        let text = heading.text.clone().unwrap_or_else(|| "".into());
+
+        if heading.level > last_heading {
+            toc_tree.push_str(&format!("<li><ul><li><a href=#{id}>{text}</a></li>"));
+            nest_count += 1;
+        } else if heading.level < last_heading && nest_count > 0 {
+            toc_tree.push_str(&format!("</ul></li><li><a href=#{id}>{text}</a></li>"));
+            nest_count -= 1;
+        } else {
+            toc_tree.push_str(&format!("<li><a href=#{id}>{text}</a></li>"));
+        }
+
+        last_heading = heading.level;
+    }
+
+    // Close any unclosed nested lists
+    while nest_count > 0 {
+        toc_tree.push_str("</ul></li>");
+        nest_count -= 1;
+    }
 
     view! {
         <nav id="toc_wrapper">
-            <ul id="toc">
-             {toc.clone().into_iter()
-                 .map(move |heading| view! { <li><a href={format!("#{}", heading.id.unwrap_or_else(|| "".into()))}>{format!("{}. {}", heading.level, heading.text.unwrap_or_else(|| "".into()))}</a></li> })
-                 .collect_view()}
-            </ul>
+            <ul id="toc" inner_html=toc_tree/>
         </nav>
     }
 }

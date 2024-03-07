@@ -258,7 +258,7 @@ nav#toc_wrapper {
   }
 }
 
-ul#toc {
+nav#toc_wrapper ul {
   display: flex;
   flex-direction: column;
   gap: .75em;
@@ -267,7 +267,7 @@ ul#toc {
   padding: 0;
 }
 
-ul#toc > * {
+ul#toc li {
   /* Remove list markers */
   display: block;
 }
@@ -275,6 +275,11 @@ ul#toc > * {
 ul#toc a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Indent list items */
+ul#toc li ul {
+  margin-left: 1em;
 }
 
 
