@@ -14,6 +14,7 @@ cfg_if!( if #[cfg(feature = "ssr")] {
     use leptos::*;
     use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
     use log::Level::Debug;
+    use std::env;
     use surrealdb::{engine::remote::ws::{Client, Ws}, opt::auth::Namespace, Surreal};
     use tower::util::ServiceExt;
     use tower_http::services::ServeDir;
@@ -32,7 +33,8 @@ async fn main() {
     simple_logger::init_with_level(Debug).expect("Couldn't initialize logging");
 
     // Get Lazy Notes configuration
-    let ln_config = settings::get_configuration(None).expect("Failed to read configuration file");
+    let ln_config = settings::get_configuration(env::var("LN_SETTINGS_FILE").ok())
+        .expect("Failed to read configuration file");
     let ln_settings = ln_config.settings;
     let db_settings = ln_config.database;
 

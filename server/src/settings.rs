@@ -3,6 +3,7 @@ use cfg_if::cfg_if;
 cfg_if! { if #[cfg(feature = "ssr")] {
 use leptos::logging;
 use serde::Deserialize;
+use std::env;
 use std::fs::read_to_string;
 
 // Define toml layout
@@ -28,6 +29,7 @@ pub struct DatabaseSettings {
 }
 
 pub fn get_configuration(path: Option<String>) -> Option<LazyNotesConfiguration> {
+    // TODO: Expose errors to caller by returning Result
     enum Errors {
         IoError,
         ParseError,
@@ -49,10 +51,37 @@ pub fn get_configuration(path: Option<String>) -> Option<LazyNotesConfiguration>
                 Errors::ParseError
             })
         })
-        .ok()
+        .map(|mut config| {
+            // Override settings with env variables
+            if let Ok(data_dir) = env::var("LN_DATA_DIR") {
+                config.settings.data_dir = data_dir;
+            }
 
-    // TODO: Parse env variables
+            if let Ok(db_host) = env::var("LN_DB_HOST") {
+                config.database.db_host = db_host;
+            }
+
+            if let Ok(database) = env::var("LN_DB_DATABASE") {
+                config.database.database = database;
+            }
+
+            if let Ok(namespace) = env::var("LN_DB_NAMESPACE") {
+                config.database.namespace = namespace;
+            }
+
+            if let Ok(username) = env::var("LN_DB_USERNAME") {
+                config.database.username = username;
+            }
+
+            if let Ok(password) = env::var("LN_DB_PASSWORD") {
+                config.database.password = password;
+            }
+
+            config
+        })
+        .ok()
 }
+}}
 
 #[cfg(feature = "ssr")]
 #[cfg(test)]
@@ -65,7 +94,10 @@ mod tests {
     #[test]
     fn can_parse_configuration() {
         use crate::settings::get_configuration;
-        assert_ne!(get_configuration(Some(get_settings_file().to_string())), None);
+        assert_ne!(
+            get_configuration(Some(get_settings_file().to_string())),
+            None
+        );
     }
 
     #[test]
@@ -76,4 +108,3 @@ mod tests {
         assert_eq!(ln_config.settings.data_dir, "tests/notes");
     }
 }
-}}
