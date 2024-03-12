@@ -393,7 +393,7 @@ pub fn Note() -> impl IntoView {
     }
 
     let notes_as_html = {
-        let mut notes = "File not found".to_string();
+        let mut notes = String::new();
         if let Ok(path) = params.with(|params| params.clone().map(move |params| params.path.clone())) {
             let mut ext = String::new();
             if &path[path.len() - 3..] != ".md" {
@@ -402,7 +402,7 @@ pub fn Note() -> impl IntoView {
 
             notes = match read_to_string(format!("{}/{}/notes/{path}{ext}", &ln_settings.data_dir, &user.username)) {
                 Ok(notes) => notes,
-                Err(e) => format!("Error reading file: {e}").to_string(),
+                Err(_) => format!("Error reading file!").to_string(),
             };
 
             // Process urls to reflect current user
