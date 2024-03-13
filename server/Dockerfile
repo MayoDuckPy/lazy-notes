@@ -4,7 +4,7 @@ FROM rustlang/rust:nightly-slim
 WORKDIR .
 
 RUN rustup target add wasm32-unknown-unknown
-RUN cargo install cargo-leptos
+RUN cargo install --version=0.2.16 cargo-leptos
 
 COPY . .
 
