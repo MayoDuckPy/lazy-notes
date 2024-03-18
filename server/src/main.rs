@@ -69,9 +69,9 @@ async fn main() {
     let routes = generate_route_list(App);
 
     let app = Router::new()
-        .nest_service("/pkg", ServeDir::new(format!("{}/pkg", root)))
-        .nest_service("/scripts", ServeDir::new(format!("{}/scripts", root)))
-        .nest_service("/icons", ServeDir::new(format!("{}/icons", root)))
+        .nest_service("/pkg", ServeDir::new(format!("{root}/pkg")))
+        .nest_service("/scripts", ServeDir::new(format!("{root}/scripts")))
+        .nest_service("/icons", ServeDir::new(format!("{root}/icons")))
         .route("/:user/resources/*file", get(note_resource_handler))
         .route(
             "/api/*fn_name",

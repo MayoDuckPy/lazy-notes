@@ -229,7 +229,8 @@ mod tests {
 
     /// Test we can signup an account with the api endpoint
     #[tokio::test]
-    async fn test_signup() {
+    #[ignore] // Requires database and server running
+    async fn signup() {
         let client = reqwest::Client::new();
         let username = "test";
         let password = "test123";
@@ -258,7 +259,8 @@ mod tests {
 
     /// Test we can log into an account with the api endpoint
     #[tokio::test]
-    async fn test_login_logout() {
+    #[ignore] // Requires database and server running
+    async fn login_logout() {
         let client = reqwest::Client::builder()
             .cookie_store(true)
             .build()
@@ -287,7 +289,7 @@ mod tests {
 
     /// Test username validation
     #[test]
-    fn test_username_validation() {
+    fn username_validation() {
         let usernames = [
             ("", false),
             (" ", false),

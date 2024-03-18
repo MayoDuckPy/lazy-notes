@@ -492,7 +492,7 @@ mod tests {
     use crate::app::{generate_toc, TocHeading};
 
     #[test]
-    fn test_toc_generation() {
+    fn toc_generation() {
         let invalid_html = "# Markdown Title";
         let basic_html = r#"<h1 id="test"></h1>"#;
         let html_no_id = r#"<h1></h1>"#;
