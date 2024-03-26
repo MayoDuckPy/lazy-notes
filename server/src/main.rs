@@ -38,7 +38,6 @@ async fn main() {
     let ln_settings = ln_config.settings;
     let db_settings = ln_config.database;
 
-    // TODO: Automate db creation on first-launch
     // Setup SurrealDB
     let db = Surreal::new::<Ws>(db_settings.db_host) //.expect("No DB host specified"))
         .await
@@ -46,8 +45,8 @@ async fn main() {
     db.use_ns("lazy_notes").use_db("lazy_notes").await.unwrap();
     db.signin(Namespace {
         namespace: "lazy_notes",
-        username: "admin",
-        password: "debug",
+        username: &db_settings.username,
+        password: &db_settings.password,
     })
     .await
     .unwrap();
