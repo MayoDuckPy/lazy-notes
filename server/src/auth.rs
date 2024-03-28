@@ -14,6 +14,7 @@ cfg_if!( if #[cfg(feature = "ssr")] {
     use axum_session_auth::{Authentication, AuthSession, SessionSurrealPool};
     use bcrypt::{hash, verify, DEFAULT_COST};
     use crate::settings::LazyNotesSettings;
+    use leptos::logging::error;
     use regex::Regex;
     use surrealdb::{engine::remote::ws::Client, Surreal};
     use std::fs::{create_dir_all, File};
@@ -139,7 +140,7 @@ pub async fn signup(
 pub async fn login(
     username: String,
     password: String,
-    // remember: bool,
+    remember: Option<Box<str>>,
 ) -> Result<(), ServerFnError> {
     let pool: Surreal<Client> = use_context().ok_or_else(|| ServerFnError::new("Pool missing"))?;
     let auth: AuthSession<User, String, SessionSurrealPool<Client>, Surreal<Client>> =
@@ -149,12 +150,27 @@ pub async fn login(
         .await
         .ok_or_else(|| ServerFnError::new("User does not exist"))?;
 
+    let login_fail_msg = "Incorrect username/password";
     if !validate_username(&username) {
-        return Err(ServerFnError::new("Username is invalid"));
+        return Err(ServerFnError::new(login_fail_msg));
     }
 
-    if !verify(password, &user.password_hash).unwrap() {
-        return Err(ServerFnError::new("Incorrect password"));
+    match verify(password, &user.password_hash) {
+        Ok(is_verified) => {
+            if !is_verified {
+                return Err(ServerFnError::new(login_fail_msg));
+            }
+        }
+        Err(e) => {
+            error!("{e}");
+            return Err(ServerFnError::new("Error checking password"));
+        }
+    };
+
+    if let Some(is_checked) = remember {
+        if is_checked.as_ref() == "on" {
+            auth.remember_user(true);
+        }
     }
 
     auth.login_user(user.username.clone());
@@ -176,8 +192,7 @@ pub async fn logout() -> Result<(), ServerFnError> {
 #[cfg(feature = "ssr")]
 #[cfg(test)]
 mod tests {
-    // TODO: Make test code cleaner (better way to reset after post-testing)
-    // NOTE: Tests requires server running
+    // NOTE: Some tests requires a running server and are disabled by default.
     use crate::auth::{validate_username, SqlUser};
     use bcrypt::{hash, DEFAULT_COST};
     // use crate::settings;
@@ -278,6 +293,40 @@ mod tests {
         assert!(res.status().is_success());
 
         // Test Logout
+        let res = client
+            .post("http://localhost:3000/api/logout")
+            .send()
+            .await
+            .unwrap();
+
+        assert!(res.status().is_success());
+    }
+
+    #[tokio::test]
+    #[ignore] // Requires database and server running
+    async fn remember_login() {
+        let client = reqwest::Client::builder()
+            .cookie_store(true)
+            .build()
+            .unwrap();
+
+        // Test login with remember me
+        let params = [
+            ("username", "login_test"),
+            ("password", "logintest123"),
+            ("remember", "on"),
+        ];
+
+        let res = client
+            .post("http://localhost:3000/api/login")
+            .form(&params)
+            .send()
+            .await
+            .unwrap();
+
+        assert!(res.status().is_success());
+
+        // Test logout
         let res = client
             .post("http://localhost:3000/api/logout")
             .send()

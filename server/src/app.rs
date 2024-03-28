@@ -342,8 +342,10 @@ pub fn Login() -> impl IntoView {
                 <label for="password">"Password"</label>
                 <input name="password" type="password" required/>
 
-                // <label for="remember">"Remember Me"</label>
-                // <input name="remember" type="radio"/>
+                <fieldset>
+                    <input name="remember" type="checkbox"/>
+                    <label for="remember">"Remember Me"</label>
+                </fieldset>
 
                 <ErrorBoundary
                     fallback=move |_| view! {

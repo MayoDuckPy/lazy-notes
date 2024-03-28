@@ -16,6 +16,7 @@ cfg_if!( if #[cfg(feature = "ssr")] {
     use log::Level::Debug;
     use std::env;
     use surrealdb::{engine::remote::ws::{Client, Ws}, opt::auth::Namespace, Surreal};
+    use chrono::Duration;
     use tower::util::ServiceExt;
     use tower_http::services::ServeDir;
 
@@ -54,7 +55,8 @@ async fn main() {
     // Setup auth
     let pool = SessionSurrealPool::<Client>::new(db.clone());
     let session_config = SessionConfig::default().with_table_name("sessions");
-    let auth_config = AuthConfig::<String>::default();
+    let auth_config = AuthConfig::<String>::default()
+        .with_max_age(Duration::try_weeks(2).expect("Overflow on max session age"));
     let session_store =
         SessionStore::<SessionSurrealPool<Client>>::new(Some(pool.clone().into()), session_config)
             .await

@@ -179,7 +179,21 @@ a#logo {
   color: var(--black);
 }
 
+:is(.login, .signup) > form input[type="checkbox"] {
+  margin: 0;
+}
+
 /* NOTE: Consider CSS nesting in the future */
+:is(.login, .signup) > form > fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+
+  display: flex;
+  gap: .35rem;
+  align-items: center;
+}
+
 :is(.login, .signup) > form > h1 {
   margin: 0 auto;
 }
