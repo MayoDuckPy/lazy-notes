@@ -16,7 +16,7 @@ pub struct LazyNotesConfiguration {
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct LazyNotesSettings {
     pub data_dir: String,
-    pub enable_signups: bool,
+    pub enable_registration: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -57,11 +57,11 @@ pub fn get_configuration(path: Option<String>) -> Option<LazyNotesConfiguration>
                 config.settings.data_dir = data_dir;
             }
 
-            if let Ok(enable_signups) = env::var("LN_ENABLE_SIGNUPS") {
-                if enable_signups.eq_ignore_ascii_case("true") || enable_signups == "1" {
-                    config.settings.enable_signups = true;
-                } else if enable_signups.eq_ignore_ascii_case("false") || enable_signups == "0" {
-                    config.settings.enable_signups = false;
+            if let Ok(enable_registration) = env::var("LN_ENABLE_REGISTRATION") {
+                if enable_registration.eq_ignore_ascii_case("true") || enable_registration == "1" {
+                    config.settings.enable_registration = true;
+                } else if enable_registration.eq_ignore_ascii_case("false") || enable_registration == "0" {
+                    config.settings.enable_registration = false;
                 }
             }
 

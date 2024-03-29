@@ -106,7 +106,7 @@ pub async fn signup(
     let pool: Surreal<Client> =
         use_context().ok_or_else(|| ServerFnError::new("Failed to fetch database state"))?;
 
-    if !ln_settings.enable_signups {
+    if !ln_settings.enable_registration {
         return Err(ServerFnError::new("Registration is disabled"));
     }
 

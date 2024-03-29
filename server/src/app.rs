@@ -261,7 +261,7 @@ pub fn Navbar() -> impl IntoView {
                 } else {
                     view! {
                         <A class="login_btn" href="/login">"Log in"</A>
-                        {move || ln_settings.enable_signups.then(||
+                        {move || ln_settings.enable_registration.then(||
                             view! { <A class="signup_btn" href="/signup">"Sign up"</A> })
                         }
                     }.into_view()
