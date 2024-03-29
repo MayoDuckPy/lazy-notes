@@ -202,6 +202,7 @@ pub fn TocSidebar(toc: Vec<TocHeading>) -> impl IntoView {
 
 #[component]
 pub fn Navbar() -> impl IntoView {
+    let ln_settings: LazyNotesSettings = expect_context();
     let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
         expect_context();
 
@@ -260,7 +261,9 @@ pub fn Navbar() -> impl IntoView {
                 } else {
                     view! {
                         <A class="login_btn" href="/login">"Log in"</A>
-                        <A class="signup_btn" href="/signup">"Sign up"</A>
+                        {move || ln_settings.enable_signups.then(||
+                            view! { <A class="signup_btn" href="/signup">"Sign up"</A> })
+                        }
                     }.into_view()
                 }}
             </section>
@@ -302,8 +305,16 @@ pub fn Signup() -> impl IntoView {
                 <input name="password_confirmation" type="password" required/>
 
                 <ErrorBoundary
-                    fallback=move |_| view! {
-                        <p class="error">"Incorrect field(s)"</p>
+                    fallback=move |errors| {
+                        errors.get()
+                            .into_iter()
+                            .map(|(_, e)| view! {
+                                <p class="error">
+                                {format!("{}", e.to_string()
+                                    .strip_prefix("error running server function: ")
+                                    .unwrap_or_else(|| "Incorrect field(s)"))}
+                                </p>
+                            }).collect_view()
                     }>
                     <p>{response}</p>
                 </ErrorBoundary>
@@ -348,8 +359,16 @@ pub fn Login() -> impl IntoView {
                 </fieldset>
 
                 <ErrorBoundary
-                    fallback=move |_| view! {
-                        <p class="error">"Incorrect username or password"</p>
+                    fallback=move |errors| {
+                        errors.get()
+                            .into_iter()
+                            .map(|(_, e)| view! {
+                                <p class="error">
+                                {format!("{}", e.to_string()
+                                    .strip_prefix("error running server function: ")
+                                    .unwrap_or_else(|| "Incorrect username or password"))}
+                                </p>
+                            }).collect_view()
                     }>
                     <p>{response}</p>
                 </ErrorBoundary>
@@ -383,7 +402,7 @@ pub fn Note() -> impl IntoView {
     }
 
     let user = auth.current_user.clone().expect("User is authenticated");
-    let ln_settings = use_context::<LazyNotesSettings>().expect("Failed to get configuration context");
+    let ln_settings: LazyNotesSettings = expect_context();
 
     // TODO: Is it possible to not clone 'params'?
     let params = use_params::<NotesParams>();

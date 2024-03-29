@@ -15,8 +15,8 @@ pub struct LazyNotesConfiguration {
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct LazyNotesSettings {
-    // TODO: Add field for db type
     pub data_dir: String,
+    pub enable_signups: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -55,6 +55,14 @@ pub fn get_configuration(path: Option<String>) -> Option<LazyNotesConfiguration>
             // Override settings with env variables
             if let Ok(data_dir) = env::var("LN_DATA_DIR") {
                 config.settings.data_dir = data_dir;
+            }
+
+            if let Ok(enable_signups) = env::var("LN_ENABLE_SIGNUPS") {
+                if enable_signups.eq_ignore_ascii_case("true") || enable_signups == "1" {
+                    config.settings.enable_signups = true;
+                } else if enable_signups.eq_ignore_ascii_case("false") || enable_signups == "0" {
+                    config.settings.enable_signups = false;
+                }
             }
 
             if let Ok(db_host) = env::var("LN_DB_HOST") {

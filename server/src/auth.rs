@@ -101,7 +101,14 @@ pub async fn signup(
     password_confirmation: String,
     // remember: bool,
 ) -> Result<(), ServerFnError> {
-    let pool: Surreal<Client> = use_context().ok_or_else(|| ServerFnError::new("Pool missing"))?;
+    let ln_settings: LazyNotesSettings =
+        use_context().ok_or_else(|| ServerFnError::new("Failed to fetch server state"))?;
+    let pool: Surreal<Client> =
+        use_context().ok_or_else(|| ServerFnError::new("Failed to fetch database state"))?;
+
+    if !ln_settings.enable_signups {
+        return Err(ServerFnError::new("Registration is disabled"));
+    }
 
     if let Some(_user) = User::get(username.clone(), &pool).await {
         return Err(ServerFnError::new("Username is taken"));
@@ -116,7 +123,6 @@ pub async fn signup(
     }
 
     // Create user directories
-    let ln_settings: LazyNotesSettings = expect_context();
     let user_dir = format!("{}/{}", &ln_settings.data_dir, &username);
     let _ = create_dir_all(format!("{}/notes", &user_dir));
     let _ = create_dir_all(format!("{}/resources", &user_dir));

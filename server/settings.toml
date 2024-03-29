@@ -1,5 +1,6 @@
 [settings]
 data_dir = "/path/to/your/data"
+enable_signups = true
 
 [database]
 db_host = "localhost:8000"
