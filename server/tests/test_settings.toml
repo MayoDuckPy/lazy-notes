@@ -1,5 +1,6 @@
 [settings]
 data_dir = "tests/notes"
+enable_registration = true
 
 [database]
 db_host = "localhost:8000"
