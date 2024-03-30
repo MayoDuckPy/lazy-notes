@@ -111,7 +111,7 @@
           dockerImage = pkgs.dockerTools.buildLayeredImage {
             inherit name;
             tag = "latest";
-            contents = lazy-notes-server;
+            contents = [ lazy-notes-server pkgs.coreutils ];
 
             config = {
               User = "1000:1000";
