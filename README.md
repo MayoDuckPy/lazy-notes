@@ -1,11 +1,27 @@
 # Lazy Notes
 
 Lazy Notes is a web frontend for your markdown notes.
+
 Markdown files are lazily rendered to HTML when viewed allowing you to
 instantly see any changes you make to your files locally.
 Making use of Rust and the Leptos web framework, this project aims to be an
-extremely fast and lightweight option for securely viewing your notes on
+extremely **fast** and **lightweight** option for securely viewing your notes on
 the web.
+
+## Features
+
+- Automatic table-of-contents generation
+- GitHub-flavored markdown
+- Lighting-fast rendering of markdown to HTML
+- Extremely lightweight deployments with Nix
+- Session-based authentication
+- *And more to come!*
+
+![Screenshot of Lazy Notes](screenshots/notes-ui.webp)
+
+NOTE: File uploads coming soon. For now, images/videos need to be placed in the
+user's `resources/` directory and can be referenced in markdown using
+`/resources/path/to/file`.
 
 # Building
 
