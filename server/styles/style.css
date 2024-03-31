@@ -144,26 +144,31 @@ a#logo {
 }
 
 
-/* Welcome page */
 .welcome, .login, .signup {
   grid-area: content;
-
-  align-items: center;
   box-sizing: border-box;
 }
 
+/* Welcome page */
 .welcome {
   display: flex;
   flex-direction: column;
+  width: min(100%, 90ch);
 
-  padding: 4rem;
+  padding: 2rem;
+  padding-top: 1rem;
+  margin-inline: auto;
+}
+
+.welcome > h1 {
+  margin-inline: auto;
 }
 
 
 /* Login & Signup pages  */
 .login, .signup {
   display: grid;
-  justify-content: center;
+  place-items: center;
   grid-template:
     ". . ." 1fr
     ". form ." auto

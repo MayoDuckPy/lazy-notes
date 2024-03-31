@@ -379,13 +379,14 @@ pub fn Login() -> impl IntoView {
     }
 }
 
-// TODO: Setup cache
 #[component]
 pub fn HomePage() -> impl IntoView {
     view! {
         <Navbar/>
         <article class="welcome">
             <h1>"Welcome to Lazy Notes"</h1>
+            <p>"Lazy Notes is a web frontend for your markdown notes."</p>
+            <p>"Markdown files are lazily rendered to HTML when viewed allowing you to instantly see any changes you make to your files locally. Making use of Rust and the Leptos web framework, this project aims to be an extremely" <b>" fast "</b> "and" <b>" lightweight "</b> "option for securely viewing your notes on the web."</p>
         </article>
     }
 }
