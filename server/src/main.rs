@@ -13,7 +13,7 @@ cfg_if!( if #[cfg(feature = "ssr")] {
     use leptos::logging::log;
     use leptos::*;
     use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};
-    use log::Level::Debug;
+    use log::Level::Error;
     use std::env;
     use surrealdb::{engine::remote::ws::{Client, Ws}, opt::auth::Namespace, Surreal};
     use chrono::Duration;
@@ -31,7 +31,7 @@ cfg_if!( if #[cfg(feature = "ssr")] {
 async fn main() {
     // use lazy_notes::api::api_routes;
 
-    simple_logger::init_with_level(Debug).expect("Couldn't initialize logging");
+    simple_logger::init_with_level(Error).expect("Couldn't initialize logging");
 
     // Get Lazy Notes configuration
     let ln_config = settings::get_configuration(env::var("LN_SETTINGS_FILE").ok())
