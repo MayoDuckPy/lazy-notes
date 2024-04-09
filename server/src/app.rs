@@ -129,7 +129,11 @@ pub fn App() -> impl IntoView {
                     <Route path="/login" view=Login/>
                     <Route path="/:user/notes" view=|| view! { <Outlet/> }>
                         <Route path="" view=|| leptos_axum::redirect("notes/index.md")/>
-                        <Route path="*path" view=Note/>
+                        <Route
+                            path="*path"
+                            view=Note
+                            ssr=SsrMode::PartiallyBlocked
+                        />
                     </Route>
                 </Routes>
             </main>
@@ -417,7 +421,7 @@ pub fn Note() -> impl IntoView {
         return view! { <Unauthorized/> };
     }
 
-    let notes_as_html = Resource::once(move || {
+    let notes_as_html = create_blocking_resource(move || (), move |_| {
         let path = params.get().map(|params| params.path).unwrap_or("".into());
         async move { get_note_as_html(path).await }}
     );
