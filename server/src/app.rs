@@ -3,7 +3,8 @@ use cfg_if::cfg_if;
 // Tell rustc that components use ssr with islands enabled
 cfg_if! { if #[cfg(feature = "ssr")] {
 use axum_session_auth::{AuthSession, SessionSurrealPool};
-use ammonia::{is_html, Builder};
+use ammonia::is_html;
+use crate::api::get_note_as_html;
 use crate::auth;
 use crate::settings::LazyNotesSettings;
 use html5ever::{
@@ -23,8 +24,6 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use leptos_axum::ResponseOptions;
-use pulldown_cmark::{html, Options, Parser};
-use std::fs::read_to_string;
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
 #[derive(Clone, Params, PartialEq)]
@@ -201,14 +200,15 @@ pub fn TocSidebar(toc: Vec<TocHeading>) -> impl IntoView {
 }
 
 #[component]
-pub fn Navbar() -> impl IntoView {
+pub fn Navbar(
+    #[prop(default = None)]
+    toc: Option<Vec<TocHeading>>
+) -> impl IntoView {
     let ln_settings: LazyNotesSettings = expect_context();
     let auth: AuthSession<auth::User, String, SessionSurrealPool<Client>, Surreal<Client>> =
         expect_context();
 
-    let toc_context: Option<Vec<TocHeading>> = use_context();
-    let toc_visible = toc_context.clone().is_some_and(|v| !v.is_empty());
-
+    let toc_visible = toc.as_ref().is_some_and(|v| !v.is_empty());
     let send_logout = create_server_action::<auth::Logout>();
 
     view! {
@@ -269,7 +269,9 @@ pub fn Navbar() -> impl IntoView {
             </section>
         </nav>
         <Show when=move || toc_visible>
-            <TocSidebar toc=toc_context.clone().unwrap()/>
+            // TODO: Proper error handling
+            // Should only fail if bad HTML which should not happen due to sanitization
+            <TocSidebar toc=toc.clone().expect("Invalid HTML while parsing headings")/>
         </Show>
     }
 }
@@ -402,89 +404,64 @@ pub fn Note() -> impl IntoView {
         return view! { <Unauthorized/> };
     }
 
-    let user = auth.current_user.clone().expect("User is authenticated");
-    let ln_settings: LazyNotesSettings = expect_context();
-
-    // TODO: Is it possible to not clone 'params'?
+    let user = auth.current_user.clone().expect("User was not authenticated");
     let params = use_params::<NotesParams>();
-    if let Ok(username) = params.with(|params| params.clone().map(move |params| params.user.clone())) {
-        if username != user.username {
-            response.set_status(StatusCode::UNAUTHORIZED);
-            return view! { <Unauthorized/> };
-        }
+
+    // Check if user may access current note
+    if !params.with(|params|
+        params.as_ref()
+            .map(|params| user.username == params.user)
+            .is_ok_and(|authenticated| authenticated))
+    {
+        response.set_status(StatusCode::UNAUTHORIZED);
+        return view! { <Unauthorized/> };
     }
 
-    let notes_as_html = {
-        let mut notes = String::new();
-        if let Ok(path) = params.with(|params| params.clone().map(move |params| params.path.clone())) {
-            let mut ext = String::new();
-            if &path[path.len() - 3..] != ".md" {
-                ext = "/index.md".to_string();
-            }
-
-            notes = match read_to_string(format!("{}/{}/notes/{path}{ext}", &ln_settings.data_dir, &user.username)) {
-                Ok(notes) => notes,
-                Err(_) => format!("Error reading file!").to_string(),
-            };
-
-            // Process urls to reflect current user
-            notes = notes.replace("](/resources", &format!("](/{}/resources", &user.username));
-            notes = notes.replace("src=\"/resources", &format!("src=\"/{}/resources", &user.username));
-        }
-
-        convert_to_html(&notes)
-    };
-
-    // Should only fail if bad HTML which should not happen due to sanitization
-    let toc = generate_toc(&notes_as_html).unwrap();
+    let notes_as_html = Resource::once(move || {
+        let path = params.get().map(|params| params.path).unwrap_or("".into());
+        async move { get_note_as_html(path).await }}
+    );
 
     view! {
-        <Provider value=toc>
-            <Navbar/>
-        </Provider>
-        <article id="notes_wrapper">
-            <article id="notes" inner_html=notes_as_html/>
-        </article>
+        <Suspense fallback=move || view! {
+            <article id="notes_wrapper">
+                <p>"Getting your notes..."</p>
+            </article>
+        }>
+            <Navbar toc=notes_as_html.get()
+                .and_then(|notes| notes.ok())
+                .and_then(|notes| generate_toc(&notes).ok())/>
+            <article id="notes_wrapper">
+                {move || notes_as_html.get()
+                    .transpose()
+                    .map_err(|e| {
+                        view! {
+                            <article id="notes_error">
+                                <p>
+                                {move || e.to_string()
+                                    .strip_prefix("error running server function: ")
+                                    .unwrap_or_else(|| "Failed to get note")
+                                    .to_owned()}
+                                </p>
+                            </article>
+                        }
+                    })
+                    .map(|notes| view! { <article id="notes" inner_html=notes/> })
+                    .unwrap_or_else(|e| e)
+                }
+            </article>
+        </Suspense>
     }.into_view()
 }
 
 #[component]
 pub fn Unauthorized() -> impl IntoView {
     view! {
+        <Navbar/>
         <article class="no_permission">
             <p>"You do not have permission to view this page."</p>
         </article>
     }
-}
-
-/// Handles sanitizing and converting markdown to html.
-fn convert_to_html(md_input: &str) -> String {
-    let options = Options::all();
-    let parser = Parser::new_ext(md_input, options);
-
-    let mut dirty_md = String::new();
-    html::push_html(&mut dirty_md, parser);
-
-    // TODO: Allow specifying allowed tags in settings.toml
-    // TODO: Add MathML specs
-    Builder::default()
-        // .allowed_classes()
-        .id_prefix(Some("ln-"))
-        .add_tag_attributes("h1", &["id"])
-        .add_tag_attributes("h2", &["id"])
-        .add_tag_attributes("h3", &["id"])
-        .add_tag_attributes("h4", &["id"])
-        .add_tag_attributes("h5", &["id"])
-        .add_tag_attributes("h6", &["id"])
-        .add_tags(&["audio"])
-        .add_tag_attributes("video", &["src", "autoplay", "loop", "controls", "muted"])
-        .add_tags(&["video"])
-        .add_tag_attributes(
-            "video",
-            &["src", "autoplay", "loop", "controls", "muted", "width"],
-        )
-        .clean(&dirty_md)
-        .to_string()
 }
 
 /// Generate a table of contents from HTML by parsing heading elements.
