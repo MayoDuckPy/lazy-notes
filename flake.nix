@@ -20,6 +20,7 @@
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
           inherit system overlays;
+          config.allowUnfree = true;
         };
 
         settings-filter = path: type: builtins.match "settings\.toml" path == null;
@@ -33,7 +34,13 @@
         rust-toolchain = pkgs.rust-bin.selectLatestNightlyWith(
           toolchain: toolchain.default.override {
             extensions = [ "rust-src" "rust-analyzer" ];
-            targets = [ "wasm32-unknown-unknown" ];
+            targets = [
+              "aarch64-linux-android"
+              "armv7-linux-androideabi"
+              "i686-linux-android"
+              "x86_64-linux-android"
+              "wasm32-unknown-unknown"
+            ];
           }
         );
         craneLib = crane.lib.${system}.overrideToolchain rust-toolchain;
@@ -93,6 +100,7 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            # Rust & Leptos
             openssl
             pkg-config
             cacert
@@ -100,6 +108,13 @@
             cargo-make
             trunk
             rust-toolchain
+
+            # Mobile Dev
+            androidStudioPackages.dev
+            corepack
+            kotlin-language-server
+            ktlint
+            python3
           ];
 
           shellHook = "";

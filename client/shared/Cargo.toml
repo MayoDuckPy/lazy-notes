@@ -1,0 +1,27 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["lib", "staticlib", "cdylib"]
+name = "shared"
+
+[features]
+typegen = ["crux_core/typegen"]
+
+[dependencies]
+crux_core.workspace = true
+crux_http.workspace = true
+crux_kv.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+lazy_static = "1.4.0"
+uniffi = "0.27.1"
+wasm-bindgen = "0.2.92"
+
+[target.uniffi-bindgen.dependencies]
+uniffi = { version = "0.27.1", features = ["cli"] }
+
+[build-dependencies]
+uniffi = { version = "0.27.1", features = ["build"] }
