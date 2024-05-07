@@ -29,16 +29,12 @@ pub fn handle_login(
 ) {
     let response = match response {
         Ok(response) => response,
-        Err(e) => {
-            model.note = Some(format!("Failed to login: {}", e.to_string()).into());
-            caps.render.render();
+        Err(_e) => {
             return;
         }
     };
 
     if response.status() != 200 {
-        model.note = Some(format!("Failed login to {instance}").into());
-        caps.render.render();
         return;
     }
 
@@ -96,7 +92,7 @@ mod auth_tests {
 
         let app: AppTester<Note, _> = AppTester::default();
         let mut model = Model {
-            note: Some("No note available".into()),
+            note: vec![],
             session: None,
         };
 
@@ -130,8 +126,9 @@ mod auth_tests {
             )
             .unwrap();
 
-        let event = res.events.get(0).unwrap().clone();
-        let mut update = app.update(event, &mut model);
+        // Run login logic which takes HTTP response and saves session id
+        let handle_login_event = res.events.get(0).unwrap().clone();
+        let mut update = app.update(handle_login_event, &mut model);
         let req = match update.effects_mut().next().unwrap() {
             Effect::KeyValue(req) => req,
             _ => panic!("Unexpected effect from event"),
@@ -151,7 +148,7 @@ mod auth_tests {
 
         let app: AppTester<Note, _> = AppTester::default();
         let mut model = Model {
-            note: Some("No note available".into()),
+            note: vec![],
             session: None,
         };
 

@@ -4,7 +4,8 @@ use crux_kv::{KeyValue, KeyValueOutput};
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{handle_login, login, Session};
-use crate::note::{display_note, get_note};
+use crate::note::{display_note, get_note, parse_note};
+use crate::parser::{HtmlNode, HtmlParseResult, HtmlParser};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Event {
@@ -12,7 +13,9 @@ pub enum Event {
     Clear,
     GetNote,
     #[serde(skip)]
-    DisplayNote(crux_http::Result<crux_http::Response<String>>),
+    ParseNote(crux_http::Result<crux_http::Response<String>>),
+    #[serde(skip)]
+    DisplayNote(HtmlParseResult),
 
     // Authentication
     GetSession,
@@ -30,14 +33,14 @@ pub enum Event {
 
 #[derive(Clone, Default)]
 pub struct Model {
-    pub note: Option<Box<str>>,
+    pub note: Vec<HtmlNode>,
     pub session: Option<Session>,
     // pub instance: Option<Settings>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ViewModel {
-    pub note: Box<str>,
+    pub note: Vec<HtmlNode>,
     pub is_logged_in: bool,
     // pub instance: Box<str>,  // TODO: Show in settings view
 }
@@ -46,6 +49,7 @@ pub struct ViewModel {
 #[derive(Effect)]
 #[effect(app = "Note")]
 pub struct Capabilities {
+    pub html_parser: HtmlParser<Event>,
     pub http: Http<Event>,
     pub key_value: KeyValue<Event>,
     pub render: Render<Event>,
@@ -63,11 +67,12 @@ impl App for Note {
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match event {
             Event::Clear => {
-                model.note = None;
+                model.note = vec![];
                 caps.render.render();
             }
             Event::GetNote => get_note(model, caps),
-            Event::DisplayNote(response) => display_note(model, caps, response),
+            Event::ParseNote(response) => parse_note(caps, response),
+            Event::DisplayNote(result) => display_note(model, caps, result),
 
             Event::GetSession => caps.key_value.read("session", Event::LoadSession),
             Event::Login(instance, username, password) => login(caps, instance, username, password),
@@ -87,10 +92,7 @@ impl App for Note {
 
     fn view(&self, model: &Self::Model) -> Self::ViewModel {
         ViewModel {
-            note: model
-                .note
-                .clone()
-                .unwrap_or_else(|| "No note available".into()),
+            note: model.note.clone(),
             is_logged_in: model.session.is_some(),
         }
     }

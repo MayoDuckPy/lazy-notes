@@ -16,6 +16,7 @@ crux_http.workspace = true
 crux_kv.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+html5ever = "0.27.0"
 lazy_static = "1.4.0"
 uniffi = "0.27.1"
 wasm-bindgen = "0.2.92"

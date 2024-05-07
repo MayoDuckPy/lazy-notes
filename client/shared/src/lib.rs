@@ -1,6 +1,7 @@
 pub mod app;
 pub mod auth;
 pub mod note;
+pub mod parser;
 // pub mod settings;
 
 use lazy_static::lazy_static;
