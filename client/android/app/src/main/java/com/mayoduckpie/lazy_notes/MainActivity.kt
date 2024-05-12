@@ -70,8 +70,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mayoduckpie.lazy_notes.shared_types.Event
+import com.mayoduckpie.lazy_notes.shared_types.HtmlNode
 import com.mayoduckpie.lazy_notes.ui.theme.LazyNotesTheme
 import kotlinx.coroutines.launch
+import java.util.Optional
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -240,10 +242,11 @@ fun Navbar(drawerState: DrawerState) {
 @Composable
 fun Note(core: Core) {
     val scrollState = rememberScrollState()
+//    val coroutineScope = rememberCoroutineScope()
 
     // Fetch current note
     LaunchedEffect(Unit) {
-        core.update(Event.GetNote())
+        core.update(Event.GetNote("/index.md"))
     }
 
     Column(
@@ -264,6 +267,9 @@ fun Note(core: Core) {
                 "h5" -> Text(body, fontWeight = FontWeight.Bold, modifier = defaultModifier)
                 "h6" -> Text(body, fontWeight = FontWeight.Bold, modifier = defaultModifier)
                 "p" -> Text(body, modifier = defaultModifier)
+//                "a" -> TextButton(onClick = {
+//                        coroutineScope.launch { core.update(Event.GetNote(body)) }
+//                    } ) { Text(body) }
             }
         }
     }

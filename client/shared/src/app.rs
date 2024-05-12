@@ -11,7 +11,7 @@ use crate::parser::{HtmlNode, HtmlParseResult, HtmlParser};
 pub enum Event {
     // Notes
     Clear,
-    GetNote,
+    GetNote(Box<str>),
     #[serde(skip)]
     ParseNote(crux_http::Result<crux_http::Response<String>>),
     #[serde(skip)]
@@ -21,7 +21,11 @@ pub enum Event {
     GetSession,
     Login(Box<str>, Box<str>, Box<str>),
     #[serde(skip)]
-    HandleLogin(crux_http::Result<crux_http::Response<Vec<u8>>>, Box<str>),
+    HandleLogin(
+        crux_http::Result<crux_http::Response<Vec<u8>>>,
+        Box<str>,
+        Box<str>,
+    ),
 
     // Session management
     // RestoreState,
@@ -70,13 +74,15 @@ impl App for Note {
                 model.note = vec![];
                 caps.render.render();
             }
-            Event::GetNote => get_note(model, caps),
+            Event::GetNote(path) => get_note(model, caps, &path),
             Event::ParseNote(response) => parse_note(caps, response),
             Event::DisplayNote(result) => display_note(model, caps, result),
 
             Event::GetSession => caps.key_value.read("session", Event::LoadSession),
             Event::Login(instance, username, password) => login(caps, instance, username, password),
-            Event::HandleLogin(response, instance) => handle_login(model, caps, response, instance),
+            Event::HandleLogin(response, instance, username) => {
+                handle_login(model, caps, response, instance, username)
+            }
 
             Event::LoadSession(KeyValueOutput::Read(Some(session))) => {
                 model.session = serde_json::from_slice(&session).ok();

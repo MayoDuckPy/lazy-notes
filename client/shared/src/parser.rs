@@ -5,7 +5,7 @@ use crux_core::{
 use html5ever::{
     tendril::StrTendril,
     tokenizer::{BufferQueue, Tag, TagKind, Token, TokenSink, TokenSinkResult, Tokenizer},
-    ATOM_LOCALNAME__61 as TOKEN_A,
+    // ATOM_LOCALNAME__61 as TOKEN_A,
     ATOM_LOCALNAME__68_31 as TOKEN_H1,
     ATOM_LOCALNAME__68_32 as TOKEN_H2,
     ATOM_LOCALNAME__68_33 as TOKEN_H3,

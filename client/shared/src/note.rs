@@ -3,16 +3,18 @@ use crux_http::{http::mime::HTML, HttpError, Response};
 use crate::parser::HtmlParseResult;
 use crate::{Capabilities, Event, Model};
 
-const INDEX_SITE: &str = "/login_test/notes/index.md";
-
-pub fn get_note(model: &mut Model, caps: &Capabilities) {
+pub fn get_note(model: &mut Model, caps: &Capabilities, path: &str) {
     let session = match model.session.as_ref() {
         Some(session) => session,
         None => return,
     };
 
     caps.http
-        .get(format!("{}{INDEX_SITE}", session.instance.as_ref()))
+        .get(format!(
+            "{}/{}/notes/{path}",
+            session.instance.as_ref(),
+            session.username.as_ref()
+        ))
         .content_type(HTML)
         .header("Cookie", format!("session={}", session.id.as_ref()))
         .expect_string()
@@ -59,13 +61,15 @@ mod note_tests {
     fn get_note() {
         let instance = "http://localhost:3000";
         let session_id = "sessionid123";
+        let username = "login_test123";
 
         let app: AppTester<Note, _> = AppTester::default();
         let mut model = Model {
             note: vec![],
             session: Some(Session {
-                id: "sessionid123".into(),
-                instance: "http://localhost:3000".into(),
+                id: session_id.into(),
+                instance: instance.into(),
+                username: username.into(),
             }),
         };
 
@@ -75,6 +79,7 @@ mod note_tests {
                 serde_json::to_vec(&Session {
                     id: session_id.into(),
                     instance: instance.into(),
+                    username: username.into(),
                 })
                 .unwrap(),
             ))),
@@ -86,7 +91,7 @@ mod note_tests {
             .as_ref()
             .is_some_and(|session| *session.id == *session_id));
 
-        let mut update = app.update(Event::GetNote, &mut model);
+        let mut update = app.update(Event::GetNote("/index.md".into()), &mut model);
         let req = match update.effects_mut().next().unwrap() {
             Effect::Http(req) => req,
             _ => panic!("Unexpected effect from event"),

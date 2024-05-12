@@ -10,6 +10,7 @@ const _SIGNUP_API: &str = "/api/signup";
 pub struct Session {
     pub id: Box<str>,
     pub instance: Box<str>,
+    pub username: Box<str>,
 }
 
 pub fn login(caps: &Capabilities, instance: Box<str>, username: Box<str>, password: Box<str>) {
@@ -18,7 +19,7 @@ pub fn login(caps: &Capabilities, instance: Box<str>, username: Box<str>, passwo
     caps.http
         .post(format!("{instance}{LOGIN_API}"))
         .body_string(format!("username={username}&password={password}"))
-        .send(|res| Event::HandleLogin(res, instance));
+        .send(|res| Event::HandleLogin(res, instance, username));
 }
 
 pub fn handle_login(
@@ -26,6 +27,7 @@ pub fn handle_login(
     caps: &Capabilities,
     response: Result<Response<Vec<u8>>, HttpError>,
     instance: Box<str>,
+    username: Box<str>,
 ) {
     let response = match response {
         Ok(response) => response,
@@ -62,6 +64,7 @@ pub fn handle_login(
         let session = Session {
             id: session.into(),
             instance,
+            username,
         };
 
         caps.key_value.write(
@@ -145,6 +148,7 @@ mod auth_tests {
     fn login_with_session() {
         let instance = "http://localhost:3000";
         let session_id = "sessionid123";
+        let username = "login_test123";
 
         let app: AppTester<Note, _> = AppTester::default();
         let mut model = Model {
@@ -158,6 +162,7 @@ mod auth_tests {
                 serde_json::to_vec(&Session {
                     id: session_id.into(),
                     instance: instance.into(),
+                    username: username.into(),
                 })
                 .unwrap(),
             ))),
