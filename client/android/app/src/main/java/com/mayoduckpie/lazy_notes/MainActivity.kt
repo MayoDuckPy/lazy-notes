@@ -242,7 +242,7 @@ fun Navbar(drawerState: DrawerState) {
 @Composable
 fun Note(core: Core) {
     val scrollState = rememberScrollState()
-//    val coroutineScope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
 
     // Fetch current note
     LaunchedEffect(Unit) {
@@ -259,6 +259,8 @@ fun Note(core: Core) {
         val defaultModifier = Modifier.fillMaxWidth()
         for (node in core.view?.note ?: listOf()) {
             val body = node.body.orElse("")
+            val href = node.href.orElse("")
+
             when (node.tag) {
                 "h1" -> Text(body, style = MaterialTheme.typography.headlineLarge, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = defaultModifier)
                 "h2" -> Text(body, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, modifier = defaultModifier)
@@ -267,9 +269,9 @@ fun Note(core: Core) {
                 "h5" -> Text(body, fontWeight = FontWeight.Bold, modifier = defaultModifier)
                 "h6" -> Text(body, fontWeight = FontWeight.Bold, modifier = defaultModifier)
                 "p" -> Text(body, modifier = defaultModifier)
-//                "a" -> TextButton(onClick = {
-//                        coroutineScope.launch { core.update(Event.GetNote(body)) }
-//                    } ) { Text(body) }
+                "a" -> TextButton(onClick = {
+                        coroutineScope.launch { core.update(Event.GetNote(href)) }
+                    } ) { Text(body, color = Color.Blue) }
             }
         }
     }

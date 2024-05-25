@@ -5,13 +5,14 @@ use crux_core::{
 use html5ever::{
     tendril::StrTendril,
     tokenizer::{BufferQueue, Tag, TagKind, Token, TokenSink, TokenSinkResult, Tokenizer},
-    // ATOM_LOCALNAME__61 as TOKEN_A,
+    ATOM_LOCALNAME__61 as TOKEN_A,
     ATOM_LOCALNAME__68_31 as TOKEN_H1,
     ATOM_LOCALNAME__68_32 as TOKEN_H2,
     ATOM_LOCALNAME__68_33 as TOKEN_H3,
     ATOM_LOCALNAME__68_34 as TOKEN_H4,
     ATOM_LOCALNAME__68_35 as TOKEN_H5,
     ATOM_LOCALNAME__68_36 as TOKEN_H6,
+    ATOM_LOCALNAME__68_72_65_66 as TOKEN_HREF,
     // ATOM_LOCALNAME__6C_69 as TOKEN_LI,
     // ATOM_LOCALNAME__75_69 as TOKEN_UL,
     ATOM_LOCALNAME__70 as TOKEN_P,
@@ -29,6 +30,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct HtmlNode {
     pub tag: String,
+    pub href: Option<String>,
     pub body: Option<String>,
 }
 
@@ -50,7 +52,7 @@ impl TokenSink for HtmlParseResult {
                 kind: TagKind::StartTag,
                 name,
                 self_closing: false,
-                attrs: _,
+                attrs,
             }) => {
                 if [
                     TOKEN_H1, TOKEN_H2, TOKEN_H3, TOKEN_H4, TOKEN_H5, TOKEN_H6, TOKEN_P,
@@ -64,14 +66,21 @@ impl TokenSink for HtmlParseResult {
                         TOKEN_H4 => "h4",
                         TOKEN_H5 => "h5",
                         TOKEN_H6 => "h6",
-                        // TOKEN_A => "a",
+                        TOKEN_A => "a",
                         TOKEN_P => "p",
                         _ => return TokenSinkResult::Continue,
                     }
                     .to_string();
 
+                    let href = attrs
+                        .iter()
+                        .find(|a| a.name.local == TOKEN_HREF)
+                        .map(|a| Some(a.value.to_string()))
+                        .unwrap_or_else(|| None);
+
                     self.nodes.push(HtmlNode {
                         tag: name,
+                        href,
                         body: None,
                     });
                 }
