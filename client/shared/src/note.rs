@@ -1,6 +1,5 @@
 use crux_http::{http::mime::HTML, HttpError, Response};
 
-use crate::parser::HtmlParseResult;
 use crate::{Capabilities, Event, Model};
 
 pub fn get_note(model: &mut Model, caps: &Capabilities, path: &str) {
@@ -18,31 +17,27 @@ pub fn get_note(model: &mut Model, caps: &Capabilities, path: &str) {
         .content_type(HTML)
         .header("Cookie", format!("session={}", session.id.as_ref()))
         .expect_string()
-        .send(Event::ParseNote);
-
-    caps.render.render();
+        .send(Event::DisplayNote);
 }
 
-pub fn parse_note(caps: &Capabilities, response: Result<Response<String>, HttpError>) {
-    if let Ok(mut response) = response {
-        caps.html_parser.parse_html(
-            &response.take_body().unwrap_or_default(),
-            Event::DisplayNote,
-        );
-        return;
+pub fn display_note(
+    model: &mut Model,
+    caps: &Capabilities,
+    response: Result<Response<String>, HttpError>,
+) {
+    model.note = response
+        .ok()
+        .and_then(|mut res| res.take_body())
+        .map(|body| body.into_boxed_str());
+
+    // TODO: Notify user and return to login screen
+    // Auth failed; send empty buffer to signal erasure of key
+    if model.note.is_none() {
+        caps.key_value.write("session", vec![], Event::SaveSession);
+        model.session = None;
     }
 
-    // TODO: Notify user and return to login screen with error message
-    // If bad response, assume bad session and reset local key
-    // Send empty buffer to signal erasure of key
-    caps.key_value
-        .write("session", Vec::new(), Event::SaveSession);
     caps.render.render();
-}
-
-pub fn display_note(model: &mut Model, caps: &Capabilities, result: HtmlParseResult) {
-    model.note = result.nodes;
-    caps.render.render()
 }
 
 #[cfg(test)]
@@ -54,7 +49,6 @@ mod note_tests {
     use crux_kv::KeyValueOutput;
 
     use crate::auth::Session;
-    use crate::parser::HtmlNode;
     use crate::{Effect, Event, Model, Note};
 
     #[test]
@@ -65,7 +59,7 @@ mod note_tests {
 
         let app: AppTester<Note, _> = AppTester::default();
         let mut model = Model {
-            note: vec![],
+            note: None,
             session: Some(Session {
                 id: session_id.into(),
                 instance: instance.into(),
@@ -107,22 +101,14 @@ mod note_tests {
         // );
 
         let body = "<h1>Success</h1>";
-        let body_parsed = vec![HtmlNode {
-            tag: "h1".into(),
-            body: Some("Success".into()),
-        }];
-
         let res = app
             .resolve(req, HttpResult::Ok(HttpResponse::ok().body(body).build()))
             .unwrap();
 
-        let parse_event = res.events.get(0).unwrap().clone();
-        let update = app.update(parse_event, &mut model);
-
-        let display_event = update.events.get(0).unwrap().clone();
+        let display_event = res.events.get(0).unwrap().clone();
         let _ = app.update(display_event, &mut model);
 
         let view = app.view(&model);
-        assert_eq!(view.note, body_parsed);
+        assert_eq!(view.note, Some(body.into()));
     }
 }

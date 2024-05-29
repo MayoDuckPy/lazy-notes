@@ -95,7 +95,7 @@ mod auth_tests {
 
         let app: AppTester<Note, _> = AppTester::default();
         let mut model = Model {
-            note: vec![],
+            note: None,
             session: None,
         };
 
@@ -152,7 +152,7 @@ mod auth_tests {
 
         let app: AppTester<Note, _> = AppTester::default();
         let mut model = Model {
-            note: vec![],
+            note: None,
             session: None,
         };
 

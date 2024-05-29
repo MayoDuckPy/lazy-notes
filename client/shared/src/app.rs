@@ -4,8 +4,7 @@ use crux_kv::{KeyValue, KeyValueOutput};
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{handle_login, login, Session};
-use crate::note::{display_note, get_note, parse_note};
-use crate::parser::{HtmlNode, HtmlParseResult, HtmlParser};
+use crate::note::{display_note, get_note};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Event {
@@ -13,9 +12,7 @@ pub enum Event {
     Clear,
     GetNote(Box<str>),
     #[serde(skip)]
-    ParseNote(crux_http::Result<crux_http::Response<String>>),
-    #[serde(skip)]
-    DisplayNote(HtmlParseResult),
+    DisplayNote(crux_http::Result<crux_http::Response<String>>),
 
     // Authentication
     GetSession,
@@ -37,15 +34,15 @@ pub enum Event {
 
 #[derive(Clone, Default)]
 pub struct Model {
-    pub note: Vec<HtmlNode>,
+    pub note: Option<Box<str>>,
     pub session: Option<Session>,
     // pub instance: Option<Settings>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ViewModel {
-    pub note: Vec<HtmlNode>,
-    pub is_logged_in: bool,
+    pub note: Option<Box<str>>,
+    pub session: Option<Session>,
     // pub instance: Box<str>,  // TODO: Show in settings view
 }
 
@@ -53,7 +50,7 @@ pub struct ViewModel {
 #[derive(Effect)]
 #[effect(app = "Note")]
 pub struct Capabilities {
-    pub html_parser: HtmlParser<Event>,
+    // pub html_parser: HtmlParser<Event>,
     pub http: Http<Event>,
     pub key_value: KeyValue<Event>,
     pub render: Render<Event>,
@@ -71,12 +68,11 @@ impl App for Note {
     fn update(&self, event: Self::Event, model: &mut Self::Model, caps: &Self::Capabilities) {
         match event {
             Event::Clear => {
-                model.note = vec![];
+                model.note = None;
                 caps.render.render();
             }
             Event::GetNote(path) => get_note(model, caps, &path),
-            Event::ParseNote(response) => parse_note(caps, response),
-            Event::DisplayNote(result) => display_note(model, caps, result),
+            Event::DisplayNote(response) => display_note(model, caps, response),
 
             Event::GetSession => caps.key_value.read("session", Event::LoadSession),
             Event::Login(instance, username, password) => login(caps, instance, username, password),
@@ -90,7 +86,10 @@ impl App for Note {
                 // Update view model
                 caps.render.render();
             }
-            Event::LoadSession(KeyValueOutput::Read(None)) => {}
+            Event::LoadSession(KeyValueOutput::Read(None)) => {
+                // No session available but update view model (session is None by default)
+                caps.render.render();
+            }
             Event::LoadSession(KeyValueOutput::Write(_success)) => unreachable!(),
             Event::SaveSession(_) => {} // Assume correctness (Android should not trigger error case)
         };
@@ -99,7 +98,7 @@ impl App for Note {
     fn view(&self, model: &Self::Model) -> Self::ViewModel {
         ViewModel {
             note: model.note.clone(),
-            is_logged_in: model.session.is_some(),
+            session: model.session.clone(),
         }
     }
 }

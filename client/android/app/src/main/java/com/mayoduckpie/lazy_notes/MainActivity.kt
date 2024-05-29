@@ -3,6 +3,11 @@
 package com.mayoduckpie.lazy_notes
 
 import android.os.Bundle
+import android.view.ViewGroup
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,11 +28,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsTopHeight
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
@@ -56,7 +59,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -64,16 +66,18 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mayoduckpie.lazy_notes.shared_types.Event
-import com.mayoduckpie.lazy_notes.shared_types.HtmlNode
 import com.mayoduckpie.lazy_notes.ui.theme.LazyNotesTheme
 import kotlinx.coroutines.launch
-import java.util.Optional
+import kotlinx.coroutines.runBlocking
+import kotlin.jvm.optionals.getOrNull
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -115,7 +119,7 @@ fun App(core: Core = viewModel()) {
         }
         composable("note") {
             if (core.view != null) {
-                if (core.view?.is_logged_in == true) {
+                if (core.view?.session!!.isPresent) {
                     NoteView(core)
                 } else {
                     navController.navigate("login")
@@ -241,39 +245,54 @@ fun Navbar(drawerState: DrawerState) {
 
 @Composable
 fun Note(core: Core) {
-    val scrollState = rememberScrollState()
-    val coroutineScope = rememberCoroutineScope()
+    val instance = core.view?.session!!.map { it.instance.toUri() }.getOrNull()
 
-    // Fetch current note
-    LaunchedEffect(Unit) {
-        core.update(Event.GetNote("/index.md"))
-    }
+    Column(modifier = Modifier.fillMaxSize()) {
+        AndroidView(
+            factory = {
+                WebView(it).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        val defaultModifier = Modifier.fillMaxWidth()
-        for (node in core.view?.note ?: listOf()) {
-            val body = node.body.orElse("")
-            val href = node.href.orElse("")
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                            // Ignore JS loading
+                            if (instance == null || request.url.path!!.endsWith(".js") || request.url.path!!.endsWith(".wasm")) {
+                                return WebResourceResponse(null, null, null)
+                            }
 
-            when (node.tag) {
-                "h1" -> Text(body, style = MaterialTheme.typography.headlineLarge, fontSize = 40.sp, fontWeight = FontWeight.Bold, modifier = defaultModifier)
-                "h2" -> Text(body, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, modifier = defaultModifier)
-                "h3" -> Text(body, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = defaultModifier)
-                "h4" -> Text(body, fontWeight = FontWeight.Bold, modifier = defaultModifier)
-                "h5" -> Text(body, fontWeight = FontWeight.Bold, modifier = defaultModifier)
-                "h6" -> Text(body, fontWeight = FontWeight.Bold, modifier = defaultModifier)
-                "p" -> Text(body, modifier = defaultModifier)
-                "a" -> TextButton(onClick = {
-                        coroutineScope.launch { core.update(Event.GetNote(href)) }
-                    } ) { Text(body, color = Color.Blue) }
-            }
-        }
+                            // Use default handling if not note (for asset loading)
+                            if (request.url.host != instance.host || !request.url.path!!.endsWith(".md"))
+                                return null
+
+                            // Construct note path
+                            val regex = Regex("^/[^/]*/notes")
+                            val path = request.url.path!!.replace(regex, "")
+
+                            // Wait for note to fetch
+                            runBlocking {
+                                core.update(Event.GetNote(path))
+                            }
+
+                            val html = core.view?.note!!.orElse("<h1>Failed to fetch note</h1>").byteInputStream()
+                            return WebResourceResponse("text/html", "utf-8", html)
+                        }
+                    }
+
+                    settings.javaScriptEnabled = false
+                    settings.loadsImagesAutomatically = true
+                    settings.loadWithOverviewMode = true
+                    settings.useWideViewPort = true
+                    settings.setSupportZoom(true)
+                    settings.allowFileAccess = false
+                    settings.allowContentAccess = false
+
+                    loadUrl("${instance}/index.md")
+                }
+            },
+        )
     }
 }
 
@@ -287,7 +306,7 @@ fun LoginView(core: Core, noteRoute: () -> Unit, signupRoute: () -> Unit) {
     val doLogin: () -> Unit = {
         coroutineScope.launch {
             core.update(Event.Login(instance.text, username.text, password.text))
-            if (core.view?.is_logged_in == true) { noteRoute() }
+            if (core.view?.session!!.isPresent) { noteRoute() }
         }
     }
 
