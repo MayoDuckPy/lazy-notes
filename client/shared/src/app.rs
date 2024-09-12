@@ -4,7 +4,7 @@ use crux_kv::{KeyValue, KeyValueOutput};
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{handle_login, login, Session};
-use crate::note::{display_note, get_note};
+use crate::note::{display_note, get_note, get_note_css, render_css};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Event {
@@ -13,6 +13,10 @@ pub enum Event {
     GetNote(Box<str>),
     #[serde(skip)]
     DisplayNote(crux_http::Result<crux_http::Response<String>>),
+
+    GetCss,
+    #[serde(skip)]
+    RenderCss(crux_http::Result<crux_http::Response<String>>),
 
     // Authentication
     GetSession,
@@ -34,6 +38,7 @@ pub enum Event {
 
 #[derive(Clone, Default)]
 pub struct Model {
+    pub css: Option<Box<str>>,
     pub note: Option<Box<str>>,
     pub session: Option<Session>,
     // pub instance: Option<Settings>,
@@ -41,6 +46,7 @@ pub struct Model {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ViewModel {
+    pub css: Option<Box<str>>,
     pub note: Option<Box<str>>,
     pub session: Option<Session>,
     // pub instance: Box<str>,  // TODO: Show in settings view
@@ -74,6 +80,9 @@ impl App for Note {
             Event::GetNote(path) => get_note(model, caps, &path),
             Event::DisplayNote(response) => display_note(model, caps, response),
 
+            Event::GetCss => get_note_css(model, caps),
+            Event::RenderCss(response) => render_css(model, caps, response),
+
             Event::GetSession => caps.key_value.read("session", Event::LoadSession),
             Event::Login(instance, username, password) => login(caps, instance, username, password),
             Event::HandleLogin(response, instance, username) => {
@@ -97,6 +106,7 @@ impl App for Note {
 
     fn view(&self, model: &Self::Model) -> Self::ViewModel {
         ViewModel {
+            css: model.css.clone(),
             note: model.note.clone(),
             session: model.session.clone(),
         }

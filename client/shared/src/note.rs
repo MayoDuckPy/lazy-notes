@@ -1,4 +1,7 @@
-use crux_http::{http::mime::HTML, HttpError, Response};
+use crux_http::{
+    http::mime::{CSS, HTML},
+    HttpError, Response,
+};
 
 use crate::{Capabilities, Event, Model};
 
@@ -40,6 +43,32 @@ pub fn display_note(
     caps.render.render();
 }
 
+pub fn get_note_css(model: &mut Model, caps: &Capabilities) {
+    let session = match model.session.as_ref() {
+        Some(session) => session,
+        None => return,
+    };
+
+    caps.http
+        .get(format!("{}/pkg/lazy-notes.css", session.instance.as_ref(),))
+        .content_type(CSS)
+        .expect_string()
+        .send(Event::RenderCss);
+}
+
+pub fn render_css(
+    model: &mut Model,
+    caps: &Capabilities,
+    response: Result<Response<String>, HttpError>,
+) {
+    model.css = response
+        .ok()
+        .and_then(|mut res| res.take_body())
+        .map(|body| body.into_boxed_str());
+
+    caps.render.render();
+}
+
 #[cfg(test)]
 mod note_tests {
     use core::panic;
@@ -59,6 +88,7 @@ mod note_tests {
 
         let app: AppTester<Note, _> = AppTester::default();
         let mut model = Model {
+            css: None,
             note: None,
             session: Some(Session {
                 id: session_id.into(),

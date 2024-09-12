@@ -263,12 +263,25 @@ fun Note(core: Core) {
                                 return WebResourceResponse(null, null, null)
                             }
 
-                            // Use default handling if not note (for asset loading)
-                            if (request.url.host != instance.host || !request.url.path!!.endsWith(".md"))
+                            // CSS handler
+                            if (request.url.path!!.endsWith(".css")) {
+                                // Wait for css to fetch
+                                runBlocking {
+                                    core.update(Event.GetCss())
+                                }
+
+                                // TODO: Properly handle error (display 'Failed to load stylesheet' toast?)
+                                val css = core.view?.css!!.orElse("/* Failed to fetch CSS */").byteInputStream()
+                                return WebResourceResponse("text/css", "utf-8", css)
+                            }
+
+                            // Use default handling if not note (will not load since no handler currently)
+                            if (request.url.host != instance.host || !request.url.path!!.endsWith(".md")) {
                                 return null
+                            }
 
                             // Construct note path
-                            val regex = Regex("^/[^/]*/notes")
+                            val regex = Regex("^/[^/]*/notes/")
                             val path = request.url.path!!.replace(regex, "")
 
                             // Wait for note to fetch
