@@ -74,6 +74,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mayoduckpie.lazy_notes.shared_types.Event
+import com.mayoduckpie.lazy_notes.shared_types.TocHeading
 import com.mayoduckpie.lazy_notes.ui.theme.LazyNotesTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -134,28 +135,34 @@ fun App(core: Core = viewModel()) {
 @Composable
 fun NoteView(core: Core) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+
+    val toc = core.view?.toc?.getOrNull()
+    var tocList: List<TocHeading> = emptyList()
+    var title = ""
+
+    if (!toc.isNullOrEmpty()) {
+        title = toc[0].text.orElse("Untitled Note")
+        tocList = toc
+    }
+
     ModalNavigationDrawer(
         gesturesEnabled = true,
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                Text(text = "Note Title", modifier = Modifier.padding(16.dp))
+                Text(text = title, modifier = Modifier.padding(16.dp))
                 Divider()
-                NavigationDrawerItem(
-                    label = { Text(text = "Heading 1") },
-                    selected = false,
-                    onClick = {}
-                )
-                NavigationDrawerItem(
-                    label = { Text(text = "Heading 2") },
-                    selected = false,
-                    onClick = {}
-                )
-                NavigationDrawerItem(
-                    label = { Text(text = "Heading 3") },
-                    selected = false,
-                    onClick = {}
-                )
+
+                if (tocList.size > 1) {
+                    for (heading in tocList.listIterator(1)) {
+                        NavigationDrawerItem(
+                            label = { Text(text = heading.text.orElse("Untitled Heading")) },
+                            selected = false,
+                            onClick = {}
+                        )
+                    }
+                }
+
                 Spacer(Modifier.weight(1f))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -164,7 +171,7 @@ fun NoteView(core: Core) {
                         .padding(20.dp)
                         .height(30.dp)
                 ) {
-                    Text("Welcome, User")
+                    Text("Welcome, ${core.view?.session?.map { session -> session.username }?.orElse("User")}")
                     Spacer(Modifier.weight(1f))
                     IconButton(
                         modifier = Modifier.size(20.dp),
