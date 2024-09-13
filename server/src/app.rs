@@ -118,25 +118,23 @@ pub fn App() -> impl IntoView {
         <Title text="Lazy Notes"/>
 
         <Router>
-            <main>
-                <Routes>
-                    // NOTE: This component is not receiving global context
-                    //       defined in 'main.rs' so redirect to /home is
-                    //       needed to obtain AuthSession.
-                    <Route path="" view=|| leptos_axum::redirect("/home")/>
-                    <Route path="/home" view=HomePage/>
-                    <Route path="/signup" view=Signup/>
-                    <Route path="/login" view=Login/>
-                    <Route path="/:user/notes" view=|| view! { <Outlet/> }>
-                        <Route path="" view=|| leptos_axum::redirect("notes/index.md")/>
-                        <Route
-                            path="*path"
-                            view=Note
-                            ssr=SsrMode::PartiallyBlocked
-                        />
-                    </Route>
-                </Routes>
-            </main>
+            <Routes>
+                // NOTE: This component is not receiving global context
+                //       defined in 'main.rs' so redirect to /home is
+                //       needed to obtain AuthSession.
+                <Route path="" view=|| leptos_axum::redirect("/home")/>
+                <Route path="/home" view=HomePage/>
+                <Route path="/signup" view=Signup/>
+                <Route path="/login" view=Login/>
+                <Route path="/:user/notes" view=|| view! { <Outlet/> }>
+                    <Route path="" view=|| leptos_axum::redirect("notes/index.md")/>
+                    <Route
+                        path="*path"
+                        view=Note
+                        ssr=SsrMode::PartiallyBlocked
+                    />
+                </Route>
+            </Routes>
         </Router>
     }
 }
@@ -298,36 +296,38 @@ pub fn Signup() -> impl IntoView {
 
     view! {
         <Navbar/>
-        <article class="signup">
-            <ActionForm action=send_signup>
-                <h1>"Sign Up"</h1>
-                <label for="username">"Username"</label>
-                <input name="username" pattern="[a-zA-Z0-9_\\-]+" required/>
+        <main>
+            <article class="signup">
+                <ActionForm action=send_signup>
+                    <h1>"Sign Up"</h1>
+                    <label for="username">"Username"</label>
+                    <input name="username" pattern="[a-zA-Z0-9_\\-]+" required/>
 
-                <label for="password">"Password"</label>
-                <input name="password" type="password" required/>
+                    <label for="password">"Password"</label>
+                    <input name="password" type="password" required/>
 
-                <label for="password_confirmation">"Password Confirmation"</label>
-                <input name="password_confirmation" type="password" required/>
+                    <label for="password_confirmation">"Password Confirmation"</label>
+                    <input name="password_confirmation" type="password" required/>
 
-                <ErrorBoundary
-                    fallback=move |errors| {
-                        errors.get()
-                            .into_iter()
-                            .map(|(_, e)| view! {
-                                <p class="error">
-                                {format!("{}", e.to_string()
-                                    .strip_prefix("error running server function: ")
-                                    .unwrap_or_else(|| "Incorrect field(s)"))}
-                                </p>
-                            }).collect_view()
-                    }>
-                    <p>{response}</p>
-                </ErrorBoundary>
+                    <ErrorBoundary
+                        fallback=move |errors| {
+                            errors.get()
+                                .into_iter()
+                                .map(|(_, e)| view! {
+                                    <p class="error">
+                                    {format!("{}", e.to_string()
+                                        .strip_prefix("error running server function: ")
+                                        .unwrap_or_else(|| "Incorrect field(s)"))}
+                                    </p>
+                                }).collect_view()
+                        }>
+                        <p>{response}</p>
+                    </ErrorBoundary>
 
-                <input type="submit" value="Submit"/>
-            </ActionForm>
-        </article>
+                    <input type="submit" value="Submit"/>
+                </ActionForm>
+            </article>
+        </main>
     }
 }
 
@@ -350,38 +350,40 @@ pub fn Login() -> impl IntoView {
 
     view! {
         <Navbar/>
-        <article class="login">
-            <ActionForm action=send_login>
-                <h1>"Log In"</h1>
-                <label for="username">"Username"</label>
-                <input name="username" pattern="[a-zA-Z0-9_\\-]+" required/>
+        <main>
+            <article class="login">
+                <ActionForm action=send_login>
+                    <h1>"Log In"</h1>
+                    <label for="username">"Username"</label>
+                    <input name="username" pattern="[a-zA-Z0-9_\\-]+" required/>
 
-                <label for="password">"Password"</label>
-                <input name="password" type="password" required/>
+                    <label for="password">"Password"</label>
+                    <input name="password" type="password" required/>
 
-                <fieldset>
-                    <input name="remember" type="checkbox"/>
-                    <label for="remember">"Remember Me"</label>
-                </fieldset>
+                    <fieldset>
+                        <input name="remember" type="checkbox"/>
+                        <label for="remember">"Remember Me"</label>
+                    </fieldset>
 
-                <ErrorBoundary
-                    fallback=move |errors| {
-                        errors.get()
-                            .into_iter()
-                            .map(|(_, e)| view! {
-                                <p class="error">
-                                {format!("{}", e.to_string()
-                                    .strip_prefix("error running server function: ")
-                                    .unwrap_or_else(|| "Incorrect username or password"))}
-                                </p>
-                            }).collect_view()
-                    }>
-                    <p>{response}</p>
-                </ErrorBoundary>
+                    <ErrorBoundary
+                        fallback=move |errors| {
+                            errors.get()
+                                .into_iter()
+                                .map(|(_, e)| view! {
+                                    <p class="error">
+                                    {format!("{}", e.to_string()
+                                        .strip_prefix("error running server function: ")
+                                        .unwrap_or_else(|| "Incorrect username or password"))}
+                                    </p>
+                                }).collect_view()
+                        }>
+                        <p>{response}</p>
+                    </ErrorBoundary>
 
-                <input type="submit" value="Submit"/>
-            </ActionForm>
-        </article>
+                    <input type="submit" value="Submit"/>
+                </ActionForm>
+            </article>
+        </main>
     }
 }
 
@@ -389,11 +391,13 @@ pub fn Login() -> impl IntoView {
 pub fn HomePage() -> impl IntoView {
     view! {
         <Navbar/>
-        <article class="welcome">
-            <h1>"Welcome to Lazy Notes"</h1>
-            <p>"Lazy Notes is a web frontend for your markdown notes."</p>
-            <p>"Markdown files are lazily rendered to HTML when viewed allowing you to instantly see any changes you make to your files locally. Making use of Rust and the Leptos web framework, this project aims to be an extremely" <b>" fast "</b> "and" <b>" lightweight "</b> "option for securely viewing your notes on the web."</p>
-        </article>
+        <main>
+            <article class="welcome">
+                <h1>"Welcome to Lazy Notes"</h1>
+                <p>"Lazy Notes is a web frontend for your markdown notes."</p>
+                <p>"Markdown files are lazily rendered to HTML when viewed allowing you to instantly see any changes you make to your files locally. Making use of Rust and the Leptos web framework, this project aims to be an extremely" <b>" fast "</b> "and" <b>" lightweight "</b> "option for securely viewing your notes on the web."</p>
+            </article>
+        </main>
     }
 }
 
@@ -428,32 +432,36 @@ pub fn Note() -> impl IntoView {
 
     view! {
         <Suspense fallback=move || view! {
-            <article id="notes_wrapper">
-                <p>"Getting your notes..."</p>
-            </article>
+            <main>
+                <article id="notes_wrapper">
+                    <p>"Getting your notes..."</p>
+                </article>
+            </main>
         }>
             <Navbar toc=notes_as_html.get()
                 .and_then(|notes| notes.ok())
                 .and_then(|notes| generate_toc(&notes).ok())/>
-            <article id="notes_wrapper">
-                {move || notes_as_html.get()
-                    .transpose()
-                    .map_err(|e| {
-                        view! {
-                            <article id="notes_error">
-                                <p>
-                                {move || e.to_string()
-                                    .strip_prefix("error running server function: ")
-                                    .unwrap_or_else(|| "Failed to get note")
-                                    .to_owned()}
-                                </p>
-                            </article>
-                        }
-                    })
-                    .map(|notes| view! { <article id="notes" inner_html=notes/> })
-                    .unwrap_or_else(|e| e)
-                }
-            </article>
+            <main>
+                <article id="notes_wrapper">
+                    {move || notes_as_html.get()
+                        .transpose()
+                        .map_err(|e| {
+                            view! {
+                                <article id="notes_error">
+                                    <p>
+                                    {move || e.to_string()
+                                        .strip_prefix("error running server function: ")
+                                        .unwrap_or_else(|| "Failed to get note")
+                                        .to_owned()}
+                                    </p>
+                                </article>
+                            }
+                        })
+                        .map(|notes| view! { <article id="notes" inner_html=notes/> })
+                        .unwrap_or_else(|e| e)
+                    }
+                </article>
+            </main>
         </Suspense>
     }.into_view()
 }
@@ -462,9 +470,11 @@ pub fn Note() -> impl IntoView {
 pub fn Unauthorized() -> impl IntoView {
     view! {
         <Navbar/>
-        <article class="no_permission">
-            <p>"You do not have permission to view this page."</p>
-        </article>
+        <main>
+            <article class="no_permission">
+                <p>"You do not have permission to view this page."</p>
+            </article>
+        </main>
     }
 }
 

@@ -42,11 +42,7 @@ html, body {
 }
 
 main {
-  display: grid;
-  min-height: 100vh;
-  grid-template:
-    "navbar" var(--navbar-height)
-    "content" 1fr;
+  min-height: calc(99vh - var(--navbar-height));
 }
 
 form:invalid input[type="submit"] {
@@ -86,6 +82,7 @@ a#logo {
   align-items: center;
   padding-inline: 1.25rem;
 
+  height: var(--navbar-height);
   color: white;
   background-color: var(--black);
   border-bottom: 2px solid var(--dark-gray);
@@ -272,12 +269,14 @@ nav#toc_wrapper {
 
 #toc_state:checked ~ nav#toc_wrapper {
   /* Bring element back */
-  position: sticky;
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
   pointer-events: auto;
   translate: 0;
 }
 
-#toc_state:checked ~ article#notes_wrapper {
+#toc_state:checked ~ main > article#notes_wrapper {
   margin-left: var(--sidebar-width);
 }
 

@@ -271,8 +271,8 @@ fun Note(core: Core) {
                                 }
 
                                 // TODO: Properly handle error (display 'Failed to load stylesheet' toast?)
-                                val css = core.view?.css!!.orElse("/* Failed to fetch CSS */").byteInputStream()
-                                return WebResourceResponse("text/css", "utf-8", css)
+                                val css = core.view?.css!!.orElse("/* Failed to fetch CSS */")
+                                return WebResourceResponse("text/css", "utf-8", css.byteInputStream())
                             }
 
                             // Use default handling if not note (will not load since no handler currently)
@@ -281,7 +281,7 @@ fun Note(core: Core) {
                             }
 
                             // Construct note path
-                            val regex = Regex("^/[^/]*/notes/")
+                            var regex = Regex("^/[^/]*/notes/")
                             val path = request.url.path!!.replace(regex, "")
 
                             // Wait for note to fetch
@@ -289,8 +289,11 @@ fun Note(core: Core) {
                                 core.update(Event.GetNote(path))
                             }
 
-                            val html = core.view?.note!!.orElse("<h1>Failed to fetch note</h1>").byteInputStream()
-                            return WebResourceResponse("text/html", "utf-8", html)
+                            // Strip nav elements
+                            regex = Regex("<nav.*</nav>")
+                            val html = core.view?.note!!.orElse("<h1>Failed to fetch note</h1>").replace(regex, "")
+
+                            return WebResourceResponse("text/html", "utf-8", html.byteInputStream())
                         }
                     }
 
