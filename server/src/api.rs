@@ -3,7 +3,8 @@ use leptos::*;
 
 cfg_if! { if #[cfg(feature = "ssr")] {
 use ammonia::Builder;
-use axum_session_auth::{AuthSession, SessionSurrealPool};
+use axum_session_auth::AuthSession;
+use axum_session_surreal::SessionSurrealPool;
 use crate::auth;
 use crate::settings::LazyNotesSettings;
 use http::StatusCode;

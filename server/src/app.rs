@@ -2,7 +2,8 @@ use cfg_if::cfg_if;
 
 // Tell rustc that components use ssr with islands enabled
 cfg_if! { if #[cfg(feature = "ssr")] {
-use axum_session_auth::{AuthSession, SessionSurrealPool};
+use axum_session_auth::AuthSession;
+use axum_session_surreal::SessionSurrealPool;
 use ammonia::is_html;
 use crate::api::get_note_as_html;
 use crate::auth;
@@ -487,7 +488,7 @@ fn generate_toc(html: &str) -> Result<Vec<TocHeading>, String> {
     let sink = TocSink { headings: Vec::new() };
 
     // Prepare input
-    let mut input = BufferQueue::new();
+    let mut input = BufferQueue::default();
     input.push_back(StrTendril::from_slice(html));
 
     // Parse

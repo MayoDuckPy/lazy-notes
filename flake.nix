@@ -110,7 +110,7 @@
             rust-toolchain
 
             # Mobile Dev
-            androidStudioPackages.dev
+            androidStudioPackages.stable
             corepack
             kotlin-language-server
             ktlint

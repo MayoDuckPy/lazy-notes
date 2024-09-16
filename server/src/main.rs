@@ -9,7 +9,8 @@ cfg_if!( if #[cfg(feature = "ssr")] {
         extract::{Path, State}, Router
     };
     use axum_session::{SessionConfig, SessionLayer, SessionStore};
-    use axum_session_auth::{AuthConfig, AuthSession, AuthSessionLayer, SessionSurrealPool};
+    use axum_session_auth::{AuthConfig, AuthSession, AuthSessionLayer};
+    use axum_session_surreal::SessionSurrealPool;
     use leptos::logging::log;
     use leptos::*;
     use leptos_axum::{generate_route_list, handle_server_fns_with_context, LeptosRoutes};

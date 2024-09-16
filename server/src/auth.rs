@@ -11,7 +11,8 @@ pub struct User {
 // Implement user auth methods
 cfg_if!( if #[cfg(feature = "ssr")] {
     use async_trait::async_trait;
-    use axum_session_auth::{Authentication, AuthSession, SessionSurrealPool};
+    use axum_session_auth::{Authentication, AuthSession};
+    use axum_session_surreal::SessionSurrealPool;
     use bcrypt::{hash, verify, DEFAULT_COST};
     use crate::settings::LazyNotesSettings;
     use leptos::logging::error;
