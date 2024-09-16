@@ -65,10 +65,10 @@ afterEvaluate {
     android.libraryVariants.forEach { variant ->
         var productFlavor = ""
         variant.productFlavors.forEach {
-            productFlavor += it.name.capitalize()
+            productFlavor += it.name.replaceFirstChar { name -> name.uppercase() }
         }
 
-        val buildType = variant.buildType.name.capitalize()
+        val buildType = variant.buildType.name.replaceFirstChar { name -> name.uppercase() }
 
         tasks.named("compileDebugKotlin") {
             dependsOn("typesGen", "bindGen")

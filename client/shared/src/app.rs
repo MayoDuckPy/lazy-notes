@@ -115,7 +115,11 @@ impl App for Note {
 
     fn view(&self, model: &Self::Model) -> Self::ViewModel {
         ViewModel {
-            toc: model.note.as_ref().map(|note| generate_toc(note).ok()),
+            toc: model
+                .note
+                .as_ref()
+                .map(|note| generate_toc(note).ok())
+                .flatten(),
             css: model.css.clone(),
             note: model.note.clone(),
             session: model.session.clone(),
