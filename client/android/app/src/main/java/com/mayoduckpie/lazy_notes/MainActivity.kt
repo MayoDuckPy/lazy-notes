@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
@@ -134,6 +136,7 @@ fun App(core: Core = viewModel()) {
 
 @Composable
 fun NoteView(core: Core) {
+//    val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     val toc = core.view?.toc?.getOrNull()
@@ -146,46 +149,65 @@ fun NoteView(core: Core) {
     }
 
     ModalNavigationDrawer(
-        gesturesEnabled = true,
+        gesturesEnabled = drawerState.isOpen,
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                Text(text = title, modifier = Modifier.padding(16.dp))
-                Divider()
-
-                if (tocList.size > 1) {
-                    for (heading in tocList.listIterator(1)) {
-                        NavigationDrawerItem(
-                            label = { Text(text = heading.text.orElse("Untitled Heading")) },
-                            selected = false,
-                            onClick = {}
-                        )
-                    }
-                }
-
-                Spacer(Modifier.weight(1f))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
-                        .height(30.dp)
-                ) {
-                    Text("Welcome, ${core.view?.session?.map { session -> session.username }?.orElse("User")}")
-                    Spacer(Modifier.weight(1f))
-                    IconButton(
-                        modifier = Modifier.size(20.dp),
-                        onClick = { }) {
-                            Icon(Icons.Default.Settings, "Settings")
+                Scaffold(
+                    topBar = {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(text = title, modifier = Modifier.padding(16.dp))
+                            Divider(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 8.dp))
                         }
-                    Divider(
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .width(1.dp)
-                            .fillMaxHeight())
-                    // TODO: Replace text with image
-                    Text("Sign Out")
+                    },
+                    bottomBar = {
+                        Divider()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                "Welcome, ${
+                                    core.view?.session?.map { session -> session.username }
+                                        ?.orElse("User")
+                                }"
+                            )
+                            Spacer(Modifier.weight(1f))
+                            IconButton(
+                                modifier = Modifier.size(20.dp),
+                                onClick = { }) {
+                                Icon(Icons.Default.Settings, "Settings")
+                            }
+                            Divider(
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .width(1.dp)
+                                    .height(28.dp)
+                            )
+                            // TODO: Replace text with icon (maybe)
+                            Text("Sign Out", modifier = Modifier.clickable {
+                                // TODO: Handle sign out
+//                                scope.launch {}
+                                println("Sign out attempted")
+                            })
+                        }
+                    }) { innerPadding ->
+                    LazyColumn(modifier = Modifier.padding(innerPadding)) {
+                        if (tocList.size > 1) {
+                            for (heading in tocList.listIterator(1)) {
+                                item {
+                                    NavigationDrawerItem(
+                                        label = { Text(text = heading.text.orElse("Untitled Heading")) },
+                                        selected = false,
+                                        onClick = {}
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }) {
@@ -264,9 +286,15 @@ fun Note(core: Core) {
                     )
 
                     webViewClient = object : WebViewClient() {
-                        override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                        override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest
+                        ): WebResourceResponse? {
                             // Ignore JS loading
-                            if (instance == null || request.url.path!!.endsWith(".js") || request.url.path!!.endsWith(".wasm")) {
+                            if (instance == null || request.url.path!!.endsWith(".js") || request.url.path!!.endsWith(
+                                    ".wasm"
+                                )
+                            ) {
                                 return WebResourceResponse(null, null, null)
                             }
 
@@ -279,7 +307,11 @@ fun Note(core: Core) {
 
                                 // TODO: Properly handle error (display 'Failed to load stylesheet' toast?)
                                 val css = core.view?.css!!.orElse("/* Failed to fetch CSS */")
-                                return WebResourceResponse("text/css", "utf-8", css.byteInputStream())
+                                return WebResourceResponse(
+                                    "text/css",
+                                    "utf-8",
+                                    css.byteInputStream()
+                                )
                             }
 
                             // Use default handling if not note (will not load since no handler currently)
@@ -298,7 +330,8 @@ fun Note(core: Core) {
 
                             // Strip nav elements
                             regex = Regex("<nav.*</nav>")
-                            val html = core.view?.note!!.orElse("<h1>Failed to fetch note</h1>").replace(regex, "")
+                            val html = core.view?.note!!.orElse("<h1>Failed to fetch note</h1>")
+                                .replace(regex, "")
 
                             return WebResourceResponse("text/html", "utf-8", html.byteInputStream())
                         }
@@ -384,7 +417,7 @@ fun LoginView(core: Core, noteRoute: () -> Unit, signupRoute: () -> Unit) {
             Text("Log in to Lazy Notes")
         }
 
-        TextButton( onClick = { signupRoute() } ) {
+        TextButton(onClick = { signupRoute() }) {
             Text(
                 fontSize = 14.sp,
                 text = "Register an account"
