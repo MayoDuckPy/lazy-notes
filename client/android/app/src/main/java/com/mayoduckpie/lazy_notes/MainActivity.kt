@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -290,13 +289,16 @@ fun Note(core: Core) {
                             view: WebView,
                             request: WebResourceRequest
                         ): WebResourceResponse? {
-                            // Ignore JS loading
+                            // Ignore requests for JS loading
                             if (instance == null || request.url.path!!.endsWith(".js") || request.url.path!!.endsWith(
                                     ".wasm"
                                 )
                             ) {
                                 return WebResourceResponse(null, null, null)
                             }
+
+                            // Let WebView default fetch foreign hosts
+                            if (request.url.host != instance.host) { return null }
 
                             // CSS handler
                             if (request.url.path!!.endsWith(".css")) {
@@ -314,9 +316,15 @@ fun Note(core: Core) {
                                 )
                             }
 
-                            // Use default handling if not note (will not load since no handler currently)
-                            if (request.url.host != instance.host || !request.url.path!!.endsWith(".md")) {
-                                return null
+                            // Use default handling if not note
+                            if (!request.url.path!!.endsWith(".md")) {
+                                // Wait for file to fetch
+                                runBlocking {
+                                    core.update(Event.GetNoteResource(request.url.path))
+                                }
+
+                                val res = core.view?.buffer?.getOrNull() ?: return WebResourceResponse(null, null, null)
+                                return WebResourceResponse(res.mime_type, null, res.buffer.toByteArray().inputStream())
                             }
 
                             // Construct note path

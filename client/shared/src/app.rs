@@ -12,7 +12,7 @@ use html5ever::{
 use serde::{Deserialize, Serialize};
 
 use crate::auth::{handle_login, login, Session};
-use crate::note::{display_note, get_note, get_note_css, render_css};
+use crate::note::*;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum Event {
@@ -25,6 +25,10 @@ pub enum Event {
     GetCss,
     #[serde(skip)]
     RenderCss(crux_http::Result<crux_http::Response<String>>),
+
+    GetNoteResource(Box<str>),
+    #[serde(skip)]
+    RenderNoteResource(crux_http::Result<crux_http::Response<Vec<u8>>>),
 
     // Authentication
     GetSession,
@@ -47,6 +51,7 @@ pub enum Event {
 #[derive(Clone, Default)]
 pub struct Model {
     pub css: Option<Box<str>>,
+    pub buffer: Option<MediaBuffer>,
     pub note: Option<Box<str>>,
     pub session: Option<Session>,
     // pub instance: Option<Settings>,
@@ -55,6 +60,7 @@ pub struct Model {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ViewModel {
     pub css: Option<Box<str>>,
+    pub buffer: Option<MediaBuffer>,
     pub toc: Option<Vec<TocHeading>>,
     pub note: Option<Box<str>>,
     pub session: Option<Session>,
@@ -92,6 +98,9 @@ impl App for Note {
             Event::GetCss => get_note_css(model, caps),
             Event::RenderCss(response) => render_css(model, caps, response),
 
+            Event::GetNoteResource(path) => get_note_resource(model, caps, &path),
+            Event::RenderNoteResource(response) => render_note_resource(model, caps, response),
+
             Event::GetSession => caps.key_value.read("session", Event::LoadSession),
             Event::Login(instance, username, password) => login(caps, instance, username, password),
             Event::HandleLogin(response, instance, username) => {
@@ -121,6 +130,7 @@ impl App for Note {
                 .map(|note| generate_toc(note).ok())
                 .flatten(),
             css: model.css.clone(),
+            buffer: model.buffer.clone(),
             note: model.note.clone(),
             session: model.session.clone(),
         }
